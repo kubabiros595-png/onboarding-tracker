@@ -43,6 +43,8 @@ The four stage-update checkpoints after T35 came back as "no result". The `Compa
 | 1, 19:53 | 10 of 10 | 4 of 4 | Reading the drafts, 3 were misleading: "Everything is on schedule" for a project at risk, "the target launch is still 6 November" when the projection was 9 November, and a request to send a file "by 3 November" on 9 November. |
 | 2, 19:58 | 9 of 10 | 6 of 6 | After the fix. The one failure was a false alarm in my check: the draft said "we cannot promise that earlier date", which is the honest wording. |
 | 3, 20:01 | **10 of 10** | **6 of 6** | I read all 10 again: none misleading. At-risk projects now state the projected launch, and the CSV-only kickoff says the 13 November target cannot be promised. |
+| 4, 23:04 | 10 of 10 | 6 of 6 | A repeat of run 3 with no changes, to see if the result holds. Reading the drafts, 1 was misleading: the Brightmoor status said "projected launch 2 December, target 11 December, so launch will be later than target". 2 December is before the target. |
+| Replay of run 4 | 9 of 10 | **7 of 7** | After the fix, I ran the new check on the 10 saved run-4 drafts: it flags only the Brightmoor draft and none of the 9 correct ones. |
 
 Changes after run 1:
 - The weekly-status brief now comes from the daily check: current due date (moved when the previous stage finished late), business days late, projected launch and health. Later stages are listed without their original dates.
@@ -50,6 +52,13 @@ Changes after run 1:
 - Two new canaries for these cases (C5, C6).
 
 Change after run 2: the promise check ignores a denied promise ("cannot promise", "can not guarantee").
+
+Changes after run 4:
+- New code check: the draft says the launch is late or later than the target when the projection meets the target.
+- New prompt rule: never say the launch is late unless the brief says so.
+- New canary C7 for this case.
+
+Both changes are deployed to `OT Drafts`. I could not start a fifth AI run in n8n because the trial account reached its execution limit, so the new check was tested on the saved run-4 drafts and the canaries (outside n8n, with the same code), not on fresh AI drafts.
 
 | Canary | Bad draft | Must be flagged as |
 | --- | --- | --- |
@@ -59,6 +68,7 @@ Change after run 2: the promise check ignores a denied promise ("cannot promise"
 | C4 | Offers to clean data free of charge | free work or discount |
 | C5 | Says "everything is on track" for a red project | says on track while health is red |
 | C6 | Asks for a file by a date that has passed | asks for something by a date that has passed |
+| C7 | Says the launch will be later than the target when the projection is earlier | says the launch is late when the projection meets the target |
 
 ## Review form: 6 checks
 
@@ -81,6 +91,6 @@ I ran `OT Daily Check` twice in a row with the simulated date 20 November on a t
 
 ## Limits
 
-- 39 checkpoints test the rules as written, on six scenarios I designed. They do not show that 5 business days is the right stall threshold for a real team.
+- 44 checkpoints test the rules as written, on six scenarios I designed. They do not show that 5 business days is the right stall threshold for a real team.
 - The code checks catch specific patterns. Run 1 showed that a draft can pass every check and still mislead, so a person reviews every draft.
-- 10 drafts per run is a small sample, and each run gives different wording.
+- 40 AI drafts in four runs is a small sample, and each run gives different wording. Run 4 repeated run 3 without changes and still found a new kind of mistake, so more runs would likely find more.

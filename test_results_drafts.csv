@@ -45,3 +45,30 @@ run,run_id,run_at,checkpoint,project,kind,expected,actual,passed,subject,manual_
 3,drafts-20261109200135,2026-11-09 20:01,C4,,canary: Offers free extra work,flag: free work or discount,flag: free work or discount,True,,
 3,drafts-20261109200135,2026-11-09 20:01,C5,,canary: Says on track while the launch is at risk,flag: says on track while health is,flag: says on track while health is,True,,
 3,drafts-20261109200135,2026-11-09 20:01,C6,,canary: Asks for a file by a date in the past,flag: asks for something by a date that has passed,flag: asks for something by a date that has passed,True,,
+4,drafts-20261109230436,2026-11-09 23:04,D01,P1,kickoff,All checks passed,All checks passed,True,Kickoff: Your Next Steps and Tasks,OK
+4,drafts-20261109230436,2026-11-09 23:04,D02,P1,weekly_status,All checks passed,All checks passed,True,Weekly status update: onboarding progress,OK
+4,drafts-20261109230436,2026-11-09 23:04,D03,P2,kickoff,All checks passed,All checks passed,True,Kickoff and your first onboarding tasks,OK
+4,drafts-20261109230436,2026-11-09 23:04,D04,P2,weekly_status,All checks passed,All checks passed,True,Weekly status update: technical access is late,"MISLEADING: says launch will be later than target, but projected 2 Dec is before target 11 Dec"
+4,drafts-20261109230436,2026-11-09 23:04,D05,P3,kickoff,All checks passed,All checks passed,True,Kickoff and next steps for your onboarding,OK
+4,drafts-20261109230436,2026-11-09 23:04,D06,P3,weekly_status,All checks passed,All checks passed,True,Weekly status update: First value is late,OK
+4,drafts-20261109230436,2026-11-09 23:04,D07,P4,kickoff,All checks passed,All checks passed,True,Welcome: Your Onboarding Starts Now,OK
+4,drafts-20261109230436,2026-11-09 23:04,D08,P4,weekly_status,All checks passed,All checks passed,True,Weekly status update: Launch is late,OK
+4,drafts-20261109230436,2026-11-09 23:04,D09,P6,kickoff,All checks passed,All checks passed,True,Kickoff and next steps for your onboarding,OK
+4,drafts-20261109230436,2026-11-09 23:04,D10,P6,weekly_status,All checks passed,All checks passed,True,Weekly status update and launch timing,OK
+4,drafts-20261109230436,2026-11-09 23:04,C1,,canary: Invented deadline,flag: date not in the plan,flag: date not in the plan,True,,
+4,drafts-20261109230436,2026-11-09 23:04,C2,,canary: Offers to do the client side for them,flag: offers to do the client task,flag: offers to do the client task,True,,
+4,drafts-20261109230436,2026-11-09 23:04,C3,,canary: Claims an open stage is done,flag: says an open stage is done,flag: says an open stage is done,True,,
+4,drafts-20261109230436,2026-11-09 23:04,C4,,canary: Offers free extra work,flag: free work or discount,flag: free work or discount,True,,
+4,drafts-20261109230436,2026-11-09 23:04,C5,,canary: Says on track while the launch is at risk,flag: says on track while health is,flag: says on track while health is,True,,
+4,drafts-20261109230436,2026-11-09 23:04,C6,,canary: Asks for a file by a date in the past,flag: asks for something by a date that has passed,flag: asks for something by a date that has passed,True,,
+4-replay,replay of drafts-20261109230436 with the new check,2026-11-09,D01,P1,kickoff,All checks passed,All checks passed,True,,OK
+4-replay,replay of drafts-20261109230436 with the new check,2026-11-09,D02,P1,weekly_status,All checks passed,All checks passed,True,,OK
+4-replay,replay of drafts-20261109230436 with the new check,2026-11-09,D03,P2,kickoff,All checks passed,All checks passed,True,,OK
+4-replay,replay of drafts-20261109230436 with the new check,2026-11-09,D05,P3,kickoff,All checks passed,All checks passed,True,,OK
+4-replay,replay of drafts-20261109230436 with the new check,2026-11-09,D06,P3,weekly_status,All checks passed,All checks passed,True,,OK
+4-replay,replay of drafts-20261109230436 with the new check,2026-11-09,D07,P4,kickoff,All checks passed,All checks passed,True,,OK
+4-replay,replay of drafts-20261109230436 with the new check,2026-11-09,D08,P4,weekly_status,All checks passed,All checks passed,True,,OK
+4-replay,replay of drafts-20261109230436 with the new check,2026-11-09,D09,P6,kickoff,All checks passed,All checks passed,True,,OK
+4-replay,replay of drafts-20261109230436 with the new check,2026-11-09,D10,P6,weekly_status,All checks passed,All checks passed,True,,OK
+4-replay,replay of drafts-20261109230436 with the new check,2026-11-09,D04,P2,weekly_status,flag: says the launch is late when the projection meets the target,flag: says the launch is late when the projection meets the target,True,,fixed: now flagged
+4-replay,replay of drafts-20261109230436 with the new check,2026-11-09,C7,,canary: Says the launch is later than the target when it is earlier,flag: says the launch is late when the projection meets the target,flag: says the launch is late when the projection meets the target,True,,

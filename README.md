@@ -4,6 +4,24 @@ A portfolio project on fictional data. When a contract is signed, the workflow b
 
 **Built and tested, not deployed.** It has not been used with a real client.
 
+## At a glance
+
+| | |
+| --- | --- |
+| What it shows | Implementation planning, risk detection and client communication for B2B SaaS onboarding |
+| Rules | 8 stages with owners and business-day deadlines; overdue, stalled, blocked and launch-at-risk flags; green, yellow or red health |
+| AI | Claude writes kickoff and weekly status emails only; code checks every date, stage and promise; a person approves in a review form |
+| Tests | 44 of 44 rule checkpoints, 0 false and 0 missed flags; 40 AI drafts in four runs, all read by hand, 4 of them misleading and fixed; 7 of 7 bad drafts caught |
+| Honest part | Several runs failed, all described below, including drafts that passed every check and were still misleading |
+
+## Try it in five minutes
+
+1. Submit `Contract signed form` with a fictional client: the plan appears in `OT Projects` and `OT Stages`.
+2. In `OT Daily Check`, type a later date (for example 2026-12-01) in `Simulated today` and run it: the overdue stage gets a reminder and a health colour in `OT Daily Log`. Run it again: the reminder is held.
+3. Mark a stage done with `Stage update form`. Try closing a later stage first: the form refuses.
+4. Run `OT Drafts`, then open `Open draft review` to approve or send back the drafts.
+5. Run `OT Eval` and `OT Draft Eval` to repeat the tests.
+
 ## Problem
 
 In B2B SaaS, the time between "contract signed" and "client sees value" is where many accounts are won or lost. Implementations stall quietly: the client has not sent API keys, a stage has had no update for a week, or the launch date promised in sales can no longer be met. Spreadsheets show what is planned, not what is late, and status emails often repeat old dates.
@@ -94,11 +112,11 @@ Six fictional implementations, each with a history of stage updates, replayed on
 | --- | --- |
 | Rule checkpoints (plan, flags, health, reminders, reminder repeats, metrics, form validation, handover) | **44 of 44** |
 | False flags / missed flags | **0 / 0** |
-| AI drafts that pass the code checks (final run) | **10 of 10**, and all 10 read correctly by hand |
-| Hand-written bad drafts caught by the code checks | **6 of 6** |
+| AI drafts read by hand | **40** in four runs. Runs 1 and 4 each had drafts that passed the code checks but were misleading; both are fixed |
+| Hand-written bad drafts caught by the code checks | **7 of 7** |
 | Review form rules (what is shown, what can be approved) | **6 of 6** |
 
-I set every expected answer before running the tests. Details in `test-results.md`, raw results in `test_results_rules.csv`, `test_results_drafts.csv` (all three draft runs) and `test_results_review.csv`.
+I set every expected answer before running the tests. Details in `test-results.md`, raw results in `test_results_rules.csv`, `test_results_drafts.csv` (all four draft runs and the replay) and `test_results_review.csv`.
 
 These tests show that the rules do what I designed them to do on fictional data. They do not show that the thresholds are right for a real implementation team.
 
@@ -107,6 +125,7 @@ These tests show that the rules do what I designed them to do on fictional data.
 - **Rules eval, first run 35 of 39.** The four stage-update checkpoints came back as "no result". The bug was in the test, not in the rules: the scoring node had "execute once" switched on, so it read only the first of five results. Switched off, re-run: 39 of 39.
 - **AI drafts, first run: 10 of 10 passed the code checks, but 3 were misleading when I read them.** One weekly status said "Everything is on schedule" for a project whose launch was at risk. One said the target launch "is still 6 November" when the projection was 9 November. One asked the client to send a file "by 3 November" on 9 November. Every date came from the plan, so the date check passed, but the dates were out of date. I changed two things: the brief for a weekly status now uses the daily-check state (current due date, days late, projected launch, health), and the code check now flags a deadline in the past, "on track" when health is not green, and a missing realistic launch date. I added two bad drafts for these cases to the test set.
 - **AI drafts, second run: 9 of 10.** The one failure was a false alarm in my check: a kickoff email said "we cannot promise that earlier date", and the check reacted to the word "promise". The check now ignores a denied promise. Third run: 10 of 10, 6 of 6 bad drafts caught, and I read all 10 drafts again.
+- **AI drafts, fourth run: 10 of 10 passed the checks, 1 was misleading.** I repeated run 3 without changes. One weekly status said "projected launch 2 December, target 11 December, so launch will be later than target", but 2 December is before the target. I added a check for a launch called late when it is not, a prompt rule and a bad draft for this case (C7). Run on the 10 saved run-4 drafts, the new check flags only that one. I could not run a fifth AI round in n8n because the trial account hit its execution limit, so the fix is tested on saved drafts, not fresh ones.
 - **Date parsing in my own check.** "29 October 2026" was also read as "October 20". Fixed before the first n8n run, found with the hand-written bad drafts.
 
 ## Second round of improvements
@@ -155,7 +174,7 @@ I built this project with AI assistance. I defined the stages, owners and durati
 - `demo_stage_updates.csv`: the stage updates replayed in the tests
 - `eval_checkpoints.csv`: 44 checkpoints with expected results
 - `test_results_rules.csv`: expected vs actual for every checkpoint
-- `test_results_drafts.csv`: the three draft test runs, with the result of my manual review
+- `test_results_drafts.csv`: the four draft test runs and the replay of run 4, with the result of my manual review
 - `test_results_review.csv`: review form rules
 - `daily_check_by_date.csv`: what the daily check said for every project on every simulated date
 - `sample-results.md`: example drafts and a handover note
