@@ -36,6 +36,7 @@ Dwie pozostałe metryki:
 System codziennie patrzy na **bieżący etap** każdego wdrożenia (pierwszy niezakończony).
 
 - **Po terminie** → przypomnienie do właściciela etapu. Jeśli etap jest klienta, przypomnienie idzie do jego kontaktu technicznego, jeśli nasz, do nas.
+- **To samo przypomnienie najwyżej co 3 dni robocze.** Jeśli etap był przypomniany mniej niż 3 dni robocze temu, system je wstrzymuje, żeby nikt nie dostawał tego samego maila każdego ranka. Flaga i kolor zostają bez zmian.
 - **Etap stoi dłużej niż 5 dni roboczych** bez żadnej zmiany statusu → flaga ryzyka „stoi”. Dokładnie 5 dni to jeszcze nie flaga, 6 już tak (to jest sprawdzone w testach).
 - **Klient oznaczył blokadę** (status „zablokowany” z notatką, co blokuje) → flaga „blokuje klient”.
 - **Prognoza uruchomienia wypada po docelowej dacie** → flaga „uruchomienie zagrożone”.
@@ -53,7 +54,7 @@ Do testów jest zmienna **„dzisiejsza data”** (węzeł *Simulated today*): p
 
 - **Plan i flagi to decyzje.** Muszą być takie same za każdym razem dla tych samych danych i muszą się dać wytłumaczyć („czerwony, bo etap stoi 7 dni roboczych”). Reguły w kodzie to dają, AI nie.
 - **Maila łatwo poprawić, złej decyzji trudniej.** AI pisze tylko szkice: mail na kickoff i cotygodniowy status po angielsku. Kod podaje AI wyłącznie fakty z tabeli, a potem sprawdza tekst: czy każda data jest w planie, czy jest następny etap z terminem, czy żaden otwarty etap nie jest opisany jako zrobiony, czy zadania klienta są opisane jako jego zadania, czy nie ma „za darmo” i „gwarantujemy”.
-- **Szkic idzie do mnie, nie do klienta.** Status zawsze „pending review”. Nic nie jest wysyłane.
+- **Szkic idzie do mnie, nie do klienta.** Status zawsze „pending review”. W formularzu `OT Draft Review` widzę szkice z wynikiem kontroli i wybieram: zatwierdź, do poprawy albo odrzuć. Szkic, który nie przeszedł kontroli, mogę zatwierdzić tylko z notatką. „Zatwierdzony” znaczy „gotowy do skopiowania”, nic nie jest wysyłane.
 - Nazwa klienta nie idzie do AI. Kod wstawia ją dopiero na końcu.
 
 Czego się nauczyłem: pierwsze 10 szkiców przeszło wszystkie kontrole, a i tak 3 z nich wprowadzały w błąd (pisały „wszystko zgodnie z planem” przy zagrożonym uruchomieniu albo prosiły klienta o plik „do 3 listopada”, czyli do daty z przeszłości). Daty były „z tabeli”, ale nieaktualne. Dlatego teraz AI dostaje stan z codziennej kontroli, a kod sprawdza dodatkowo: terminy z przeszłości, „on track” przy żółtym lub czerwonym i brak realnej daty uruchomienia. Wniosek: kontrola kodem nie zastępuje przeczytania szkicu przez człowieka.
@@ -67,7 +68,7 @@ The plan and the risk flags are decisions. They must give the same answer for th
 It is the number of days from contract signature to the first result the client sees on their own data. The longer it takes, the higher the risk that the client loses interest. In my test data it was 16 days for the fastest project and 36 for the late one.
 
 **3. How do you avoid false alerts?**
-A stage gets a stall flag only after more than 5 business days with no status change, and I tested exactly 5 and 6 days. When an earlier stage finishes late, the next stage still gets its normal time, so one delay does not turn every later stage red. The test set had 0 false flags and 0 missed flags.
+A stage gets a stall flag only after more than 5 business days with no status change, and I tested exactly 5 and 6 days. When an earlier stage finishes late, the next stage still gets its normal time, so one delay does not turn every later stage red. The test set had 0 false flags and 0 missed flags. Reminders are also limited: the same stage is reminded again only after 3 business days, so the client does not get the same email every morning.
 
 **4. What went wrong and what did you change?**
 Two things. The first test run scored 35 of 39 because of a bug in the test itself: the scoring node only read the first of five results. Then all 10 AI drafts passed the code checks, but when I read them, 3 used outdated dates or said "on schedule" while the launch was at risk. I fed the drafts the live status and added three more checks.

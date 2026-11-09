@@ -1,0 +1,7 @@
+checkpoint,what_it_tests,expected,actual,passed
+R1,Only drafts with status pending review are shown (an approved one is left out),"drafts 5, 6, 8, 9","drafts 5, 6, 8, 9",True
+R2,"Draft text is escaped, so HTML in a subject cannot change the page",Kickoff &lt;b&gt;test&lt;/b&gt;,Kickoff &lt;b&gt;test&lt;/b&gt;,True
+R3,A draft that passed the checks can be approved without a note,draft 5 approved,draft 5 approved,True
+R4,A draft that failed the checks cannot be approved without a note,draft 6 kept pending,draft 6 kept pending,True
+R5,Rejected without a note is kept pending,draft 8 kept pending,draft 8 kept pending,True
+R6,Edit with a note is saved; answers are read by field name or by label,"draft 9 edit, note saved","draft 9 edit, note saved",True

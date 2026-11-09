@@ -25,6 +25,7 @@ flowchart LR
     AI --> C[Code checks dates,<br/>stages and scope]
     C --> R[(OT Drafts<br/>pending review)]
     H --> R
+    R --> V[Review form<br/>approve, edit, reject]
 ```
 
 | Workflow | What it does |
@@ -33,6 +34,7 @@ flowchart LR
 | `OT Stage Update` | Form: project, stage, status, date, note. Rejects a stage closed while an earlier one is open, a block without a note and a future date. Closing Launch creates the handover note. |
 | `OT Daily Check` | Reminders, risk flags, health colour and metrics for every project. A `Simulated today` field replays any date. |
 | `OT Drafts` | Kickoff email or weekly status in English. Claude writes, code checks, a person approves. |
+| `OT Draft Review` | Login-protected form that shows the drafts waiting for review: approve, send back for edits or reject, with a note. Approved only means ready to copy. |
 | `OT Eval`, `OT Draft Eval` | Run the workflows above in test mode on 6 fictional projects. |
 
 ### The plan template
@@ -57,6 +59,7 @@ All thresholds sit in one `RULES` block at the top of the code.
 | Rule | Result |
 | --- | --- |
 | Current stage past its due date | Reminder to its owner: our implementation lead or the client's technical contact |
+| Same stage already reminded less than 3 business days ago | Reminder held, so nobody gets the same message every morning. Flags and health do not change |
 | No status change for **more than 5** business days | `stalled` flag |
 | Client marks a stage as blocked (note required) | `blocked by client` flag and reminder |
 | Projected launch later than the target | `launch at risk` flag |
@@ -89,12 +92,13 @@ Six fictional implementations, each with a history of stage updates, replayed on
 
 | Test | Result |
 | --- | --- |
-| Rule checkpoints (plan, flags, health, reminders, metrics, form validation, handover) | **39 of 39** |
+| Rule checkpoints (plan, flags, health, reminders, reminder repeats, metrics, form validation, handover) | **44 of 44** |
 | False flags / missed flags | **0 / 0** |
 | AI drafts that pass the code checks (final run) | **10 of 10**, and all 10 read correctly by hand |
 | Hand-written bad drafts caught by the code checks | **6 of 6** |
+| Review form rules (what is shown, what can be approved) | **6 of 6** |
 
-I set every expected answer before running the tests. Details in `test-results.md`, raw results in `test_results_rules.csv` and `test_results_drafts.csv` (all three draft runs).
+I set every expected answer before running the tests. Details in `test-results.md`, raw results in `test_results_rules.csv`, `test_results_drafts.csv` (all three draft runs) and `test_results_review.csv`.
 
 These tests show that the rules do what I designed them to do on fictional data. They do not show that the thresholds are right for a real implementation team.
 
@@ -104,6 +108,13 @@ These tests show that the rules do what I designed them to do on fictional data.
 - **AI drafts, first run: 10 of 10 passed the code checks, but 3 were misleading when I read them.** One weekly status said "Everything is on schedule" for a project whose launch was at risk. One said the target launch "is still 6 November" when the projection was 9 November. One asked the client to send a file "by 3 November" on 9 November. Every date came from the plan, so the date check passed, but the dates were out of date. I changed two things: the brief for a weekly status now uses the daily-check state (current due date, days late, projected launch, health), and the code check now flags a deadline in the past, "on track" when health is not green, and a missing realistic launch date. I added two bad drafts for these cases to the test set.
 - **AI drafts, second run: 9 of 10.** The one failure was a false alarm in my check: a kickoff email said "we cannot promise that earlier date", and the check reacted to the word "promise". The check now ignores a denied promise. Third run: 10 of 10, 6 of 6 bad drafts caught, and I read all 10 drafts again.
 - **Date parsing in my own check.** "29 October 2026" was also read as "October 20". Fixed before the first n8n run, found with the hand-written bad drafts.
+
+## Second round of improvements
+
+After the first version was finished I reviewed it again and added:
+
+- **Reminder repeat rule.** A stage that stays late used to produce the same reminder every morning. Now the daily check reads the last 14 days of its own log and holds a reminder for a stage that was reminded less than 3 business days ago. Five new checkpoints (T40 to T44), including a second run on the same day. I also ran the real daily check twice in a row on a test project: the first run sent the reminder, the second held it.
+- **Review form for drafts.** Before, "pending review" could only be changed by editing the table. Now `OT Draft Review` shows up to 10 waiting drafts on one page, with the result of the code checks next to each one. A draft that failed the checks can be approved only with a note, and edit or reject also need a note.
 
 ## Key design decisions
 
@@ -116,10 +127,12 @@ These tests show that the rules do what I designed them to do on fictional data.
 ## Limits
 
 - Fictional data and thresholds I chose. They are a starting point, not tuned on real implementations.
-- No public holidays in the business-day calendar.
+- No public holidays in the business-day calendar. For example, 11 November (a public holiday in Poland) falls inside the test period and is counted as a working day.
 - Reminders are logged, not sent.
 - The code checks catch specific risky patterns. They do not judge tone or whether an email makes sense: a person still has to read it, and the first draft run showed why.
 - Manual forms instead of a CRM or project-tool sync. See `data-and-privacy.md` for how that sync would work.
+- The review form's rules were tested in test mode (6 of 6). The form page itself was not clicked through by a person in this version.
+- The workflow JSON files were generated from the same code I deployed to n8n, not downloaded with n8n's export button. The node settings and code match; the positions of the nodes on the canvas are laid out automatically.
 
 ## Tools
 
@@ -135,13 +148,15 @@ I built this project with AI assistance. I defined the stages, owners and durati
 ## Files
 
 - `OT Contract Signed.json`, `OT Stage Update.json`, `OT Daily Check.json`, `OT Drafts.json`: workflow exports
+- `OT Draft Review.json`: review form for drafts
 - `OT Eval.json`, `OT Draft Eval.json`: evaluation workflows
 - `demo_projects.csv`: the 6 fictional contracts
 - `demo_plans.csv`: the plans the template built for them
 - `demo_stage_updates.csv`: the stage updates replayed in the tests
-- `eval_checkpoints.csv`: 39 checkpoints with expected results
+- `eval_checkpoints.csv`: 44 checkpoints with expected results
 - `test_results_rules.csv`: expected vs actual for every checkpoint
 - `test_results_drafts.csv`: the three draft test runs, with the result of my manual review
+- `test_results_review.csv`: review form rules
 - `daily_check_by_date.csv`: what the daily check said for every project on every simulated date
 - `sample-results.md`: example drafts and a handover note
 - `test-results.md`: test method and results
@@ -151,7 +166,7 @@ I built this project with AI assistance. I defined the stages, owners and durati
 ## How to import
 
 1. Create the data tables `OT Projects`, `OT Stages`, `OT Daily Log`, `OT Drafts`, `OT Eval Results` and `OT Eval Runs` with the columns listed in `data-and-privacy.md`.
-2. Import the six JSON files. Exports contain no credentials and no instance IDs.
+2. Import the seven JSON files. Exports contain no credentials and no instance IDs.
 3. Select your data tables in every data table node, and an Anthropic credential in `Write draft`.
 4. In `OT Eval` and `OT Draft Eval`, select the sub-workflows in the Execute Workflow nodes.
 5. Run `OT Eval` for the rules and `OT Draft Eval` for the drafts.
@@ -159,6 +174,6 @@ I built this project with AI assistance. I defined the stages, owners and durati
 ## Next improvements
 
 - Sync projects and stage updates from a CRM and a project tool instead of forms.
-- Send approved reminders and drafts through an approval step.
+- Send approved drafts from a shared mailbox, and reminders through chat, after approval in the review form.
 - Add a public holiday calendar per country.
 - Tune the stall and lateness thresholds on real implementation history.

@@ -12,18 +12,20 @@ All data is fictional. I set the expected result of every checkpoint before runn
 4. `OT Stage Update` receives five form submissions, three of which should be rejected.
 5. The results are compared with `eval_checkpoints.csv`.
 
-## Rules: 39 checkpoints
+## Rules: 44 checkpoints
 
 | Run | Checkpoints | Passed | False flags | Missed flags | Note |
 | --- | --- | --- | --- | --- | --- |
 | 2026-11-09 19:46 | 39 | 35 | 0 | 0 | T36 to T39 "no result": bug in the test (see below) |
-| 2026-11-09 19:47 | 39 | **39** | **0** | **0** | after the fix |
+| 2026-11-09 19:47 | 39 | 39 | 0 | 0 | after the fix |
+| 2026-11-09 20:12 | 44 | **44** | **0** | **0** | second round: 5 checkpoints for the reminder repeat rule |
 
 | Group | Checkpoints | Examples |
 | --- | --- | --- |
 | Plan from template | T01 to T08 | 8 stages in order; weekend skipped; API + webhook add 6 days; SSO adds 1 day to technical access; CSV-only switches the owner to us and renames stage 4; warning when the plan ends after the target |
 | Health and flags | T09 to T23 | on plan stays green; stuck at technical access goes yellow, then red on day 6 without a change (not on day 5); client blocking goes yellow, then red; late training is yellow while the launch is still reachable; red once it is not; no false "overdue" on the handover after a late launch |
 | Projection and metrics | T24 to T34 | projected launch; time to first value 16, 24 and 36 days, empty when not reached; stages on time 100% and 17%; 3 projects at risk on 9 and 16 November |
+| Reminder repeat rule | T40 to T44 | reminder sent 2 business days ago is held; after 3 it is sent again; a reminder for another stage does not hold this one; Friday to Monday counts as 1 business day; a second run on the same day sends nothing new. Health stays the same when a reminder is held |
 | Stage update form | T35 to T39 | closing a stage while an earlier one is open, a block without a note and a future date are rejected; a valid update resets the stall clock; closing Launch creates the handover note |
 
 "False flags" counts flags the rules raised but the checkpoint did not expect. "Missed flags" counts expected flags the rules did not raise. Both are counted on the 15 health-and-flag checkpoints.
@@ -57,6 +59,25 @@ Change after run 2: the promise check ignores a denied promise ("cannot promise"
 | C4 | Offers to clean data free of charge | free work or discount |
 | C5 | Says "everything is on track" for a red project | says on track while health is red |
 | C6 | Asks for a file by a date that has passed | asks for something by a date that has passed |
+
+## Review form: 6 checks
+
+`OT Draft Review` was run in test mode with five fictional drafts and a set of form answers.
+
+| Check | Result |
+| --- | --- |
+| Only drafts with status `pending review` are on the page | passed |
+| Draft text is escaped, so HTML in a subject cannot change the page | passed |
+| A draft that passed the checks can be approved without a note | passed |
+| A draft that failed the checks is kept pending when approved without a note | passed |
+| Rejected without a note is kept pending | passed |
+| Edit with a note is saved | passed |
+
+The form page itself was not clicked through by a person.
+
+## Reminder repeat rule on the real tables
+
+I ran `OT Daily Check` twice in a row with the simulated date 20 November on a test project. The first run logged "Kickoff was due on 2026-11-11 and is 7 business day(s) late"; the second run logged "Held (reminded on 2026-11-20): Kickoff".
 
 ## Limits
 

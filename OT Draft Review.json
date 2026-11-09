@@ -1,0 +1,537 @@
+{
+  "name": "OT Draft Review",
+  "nodes": [
+    {
+      "parameters": {
+        "authentication": "n8nUserAuth",
+        "formTitle": "Onboarding drafts waiting for review",
+        "formDescription": "Portfolio project on fictional data. Approved only means ready to copy: nothing is sent to clients from here.",
+        "formFields": {
+          "values": [
+            {
+              "fieldType": "html",
+              "elementName": "intro",
+              "html": "<p>Open the email drafts and handover notes waiting for your decision.</p>"
+            }
+          ]
+        },
+        "responseMode": "onReceived",
+        "options": {
+          "buttonLabel": "Show drafts",
+          "appendAttribution": false
+        }
+      },
+      "name": "Open draft review",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        0
+      ],
+      "id": "4d955a1b-b9ed-5c59-a565-c9537679f162"
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "name": "When called by eval",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        200
+      ],
+      "id": "e1c91e9a-5855-5f89-b31d-c0ddd1dca605"
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "OT Drafts"
+        },
+        "returnAll": true,
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "review_status",
+              "condition": "eq",
+              "keyValue": "pending review"
+            }
+          ]
+        }
+      },
+      "name": "Get drafts waiting",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        0
+      ],
+      "id": "c26c2f0e-e00e-5e17-a48d-aed81e138d94",
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===== DRAFT REVIEW RULES. \"approved\" only means ready to copy: nothing is ever sent from here. =====\nconst MAX_ON_PAGE = 10;\nconst DECISIONS = ['keep pending', 'approved', 'edit', 'rejected'];\nconst esc = (t) => String(t === null || t === undefined ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nfunction buildReviewPage(drafts) {\n  const pending = drafts.filter((d) => d.id && d.review_status === 'pending review')\n    .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)) || Number(a.id) - Number(b.id))\n    .slice(0, MAX_ON_PAGE);\n  const fields = [];\n  pending.forEach((d) => {\n    const checks = d.check_passed === true || d.check_passed === 'true'\n      ? '<p>Code checks: passed</p>'\n      : '<p><strong>Code checks failed:</strong> ' + esc(d.check_notes) + '</p>';\n    fields.push({ fieldType: 'html', elementName: 'draft_' + d.id,\n      html: '<hr><h3>Draft ' + d.id + ' · ' + esc(d.project_id) + ' · ' + esc(d.kind) + '</h3>' + checks +\n        '<p><strong>Subject:</strong> ' + esc(d.subject) + '</p><p>' + esc(d.body).replace(/\\n/g, '<br>') + '</p>' });\n    fields.push({ fieldLabel: 'Decision for draft ' + d.id, fieldName: 'decision_' + d.id, fieldType: 'dropdown',\n      fieldOptions: { values: DECISIONS.map((o) => ({ option: o })) }, requiredField: false });\n    fields.push({ fieldLabel: 'Note for draft ' + d.id, fieldName: 'note_' + d.id, fieldType: 'textarea', requiredField: false });\n  });\n  return { has_pending: pending.length > 0, draft_ids: pending.map((d) => d.id), form_fields: fields,\n    waiting_total: drafts.filter((d) => d.id && d.review_status === 'pending review').length };\n}\n\n// answers: what the form returned. A draft that failed the code checks can only be approved with a note.\nfunction prepareDecisions(answers, drafts, draftIds) {\n  const updates = [];\n  const kept = [];\n  draftIds.forEach((id) => {\n    const d = drafts.find((x) => String(x.id) === String(id)) || {};\n    const decision = String(answers['decision_' + id] ?? answers['Decision for draft ' + id] ?? '').trim();\n    const note = String(answers['note_' + id] ?? answers['Note for draft ' + id] ?? '').trim();\n    const passed = d.check_passed === true || d.check_passed === 'true';\n    if (!decision || decision === 'keep pending') kept.push({ id, reason: 'no decision' });\n    else if (!DECISIONS.includes(decision)) kept.push({ id, reason: 'unknown decision ' + decision });\n    else if (decision === 'approved' && !passed && !note) kept.push({ id, reason: 'failed checks: approval needs a note' });\n    else if ((decision === 'edit' || decision === 'rejected') && !note) kept.push({ id, reason: decision + ' needs a note saying what to change' });\n    else updates.push({ row_id: id, review_status: decision, reviewer_note: note });\n  });\n  return { updates, kept };\n}\n// ===== end of review rules =====\n\n// Test mode brings its own drafts and answers, so it never touches the real table.\nconst evalRun = $('When called by eval').isExecuted;\nconst e = evalRun ? $('When called by eval').first().json : {};\nconst drafts = evalRun ? (e.eval_drafts || []) : $input.all().map((i) => i.json).filter((d) => d.id);\nconst page = buildReviewPage(drafts);\nconst out = { ...page, eval_run: evalRun };\nif (evalRun) out.result = prepareDecisions(e.eval_answers || {}, drafts, page.draft_ids);\nreturn [{ json: out }];\n"
+      },
+      "name": "Build review page",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ],
+      "id": "fb8edf31-8d79-566b-8d9a-883cd97c0ba6",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.eval_run === true }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Eval run?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        0
+      ],
+      "id": "6741104c-0462-5b7d-964c-d3afa033e119"
+    },
+    {
+      "parameters": {},
+      "name": "Return review result to eval",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        960,
+        0
+      ],
+      "id": "baa0742f-eb77-5695-982c-eb591b1cdd04"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.has_pending === true }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Anything pending?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        200
+      ],
+      "id": "8d782b11-cec8-5457-99fb-1a94ad671f4e"
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "text",
+        "completionTitle": "Nothing to review",
+        "completionMessage": "There are no drafts waiting for review."
+      },
+      "name": "Nothing to review",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        1200,
+        0
+      ],
+      "id": "bff54c99-3557-5cca-ac9e-8c1bb998ade3"
+    },
+    {
+      "parameters": {
+        "operation": "page",
+        "defineForm": "json",
+        "jsonOutput": "={{ JSON.stringify($json.form_fields) }}",
+        "options": {
+          "formTitle": "Drafts waiting for review",
+          "formDescription": "Pick a decision for each draft. Edit and rejected need a note. A draft that failed the code checks can be approved only with a note. Nothing is sent.",
+          "buttonLabel": "Save decisions"
+        }
+      },
+      "name": "Review drafts",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        1200,
+        200
+      ],
+      "id": "71ae0de3-6c18-5c96-b82a-bfc14071b962"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===== DRAFT REVIEW RULES. \"approved\" only means ready to copy: nothing is ever sent from here. =====\nconst MAX_ON_PAGE = 10;\nconst DECISIONS = ['keep pending', 'approved', 'edit', 'rejected'];\nconst esc = (t) => String(t === null || t === undefined ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nfunction buildReviewPage(drafts) {\n  const pending = drafts.filter((d) => d.id && d.review_status === 'pending review')\n    .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)) || Number(a.id) - Number(b.id))\n    .slice(0, MAX_ON_PAGE);\n  const fields = [];\n  pending.forEach((d) => {\n    const checks = d.check_passed === true || d.check_passed === 'true'\n      ? '<p>Code checks: passed</p>'\n      : '<p><strong>Code checks failed:</strong> ' + esc(d.check_notes) + '</p>';\n    fields.push({ fieldType: 'html', elementName: 'draft_' + d.id,\n      html: '<hr><h3>Draft ' + d.id + ' · ' + esc(d.project_id) + ' · ' + esc(d.kind) + '</h3>' + checks +\n        '<p><strong>Subject:</strong> ' + esc(d.subject) + '</p><p>' + esc(d.body).replace(/\\n/g, '<br>') + '</p>' });\n    fields.push({ fieldLabel: 'Decision for draft ' + d.id, fieldName: 'decision_' + d.id, fieldType: 'dropdown',\n      fieldOptions: { values: DECISIONS.map((o) => ({ option: o })) }, requiredField: false });\n    fields.push({ fieldLabel: 'Note for draft ' + d.id, fieldName: 'note_' + d.id, fieldType: 'textarea', requiredField: false });\n  });\n  return { has_pending: pending.length > 0, draft_ids: pending.map((d) => d.id), form_fields: fields,\n    waiting_total: drafts.filter((d) => d.id && d.review_status === 'pending review').length };\n}\n\n// answers: what the form returned. A draft that failed the code checks can only be approved with a note.\nfunction prepareDecisions(answers, drafts, draftIds) {\n  const updates = [];\n  const kept = [];\n  draftIds.forEach((id) => {\n    const d = drafts.find((x) => String(x.id) === String(id)) || {};\n    const decision = String(answers['decision_' + id] ?? answers['Decision for draft ' + id] ?? '').trim();\n    const note = String(answers['note_' + id] ?? answers['Note for draft ' + id] ?? '').trim();\n    const passed = d.check_passed === true || d.check_passed === 'true';\n    if (!decision || decision === 'keep pending') kept.push({ id, reason: 'no decision' });\n    else if (!DECISIONS.includes(decision)) kept.push({ id, reason: 'unknown decision ' + decision });\n    else if (decision === 'approved' && !passed && !note) kept.push({ id, reason: 'failed checks: approval needs a note' });\n    else if ((decision === 'edit' || decision === 'rejected') && !note) kept.push({ id, reason: decision + ' needs a note saying what to change' });\n    else updates.push({ row_id: id, review_status: decision, reviewer_note: note });\n  });\n  return { updates, kept };\n}\n// ===== end of review rules =====\n\nconst page = $('Build review page').first().json;\nconst drafts = $('Get drafts waiting').all().map((i) => i.json).filter((d) => d.id);\nconst r = prepareDecisions($input.first().json, drafts, page.draft_ids);\nreturn [{ json: { ...r, has_updates: r.updates.length > 0 } }];\n"
+      },
+      "name": "Prepare decisions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        0
+      ],
+      "id": "cbf03501-e521-5e09-9d80-79746dca8964"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.has_updates === true }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Anything to save?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1680,
+        0
+      ],
+      "id": "0f8e61df-9a97-5a0c-b760-f086d7eef74e"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nreturn $input.first().json.updates.map((u) => ({ json: u }));\n"
+      },
+      "name": "One row per decision",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        0
+      ],
+      "id": "3552401d-f52a-55af-834a-eb7521d4e5c0"
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "OT Drafts"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.row_id }}"
+            },
+            {
+              "keyName": "review_status",
+              "condition": "eq",
+              "keyValue": "pending review"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "review_status": "={{ $json.review_status }}",
+            "reviewer_note": "={{ $json.reviewer_note }}"
+          },
+          "schema": [
+            {
+              "id": "review_status",
+              "displayName": "review_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "reviewer_note",
+              "displayName": "reviewer_note",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Save decision",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2160,
+        0
+      ],
+      "id": "216dd55c-bb57-5c8d-aa18-a9d4bf448339"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst r = $('Prepare decisions').first().json;\nconst count = (s) => r.updates.filter((u) => u.review_status === s).length;\nconst kept = r.kept.filter((k) => k.reason !== 'no decision');\nreturn [{ json: { summary: 'Saved: ' + count('approved') + ' approved, ' + count('edit') + ' to edit, ' + count('rejected') + ' rejected.' +\n  (kept.length ? ' Still pending: ' + kept.map((k) => 'draft ' + k.id + ' (' + k.reason + ')').join(', ') + '.' : '') } }];\n"
+      },
+      "name": "Summarize decisions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2400,
+        0
+      ],
+      "id": "8e660563-5fe1-500d-b228-15f11779aa50",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "text",
+        "completionTitle": "Decisions saved",
+        "completionMessage": "={{ $json.summary }}"
+      },
+      "name": "Decisions saved",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        2640,
+        0
+      ],
+      "id": "8d7bd3b8-02d9-5ddb-8f72-85448c9237df"
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "text",
+        "completionTitle": "Nothing saved",
+        "completionMessage": "={{ $json.kept.filter(k => k.reason !== 'no decision').map(k => 'Draft ' + k.id + ': ' + k.reason).join('. ') || 'No decisions were picked.' }}"
+      },
+      "name": "Nothing saved",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        1920,
+        200
+      ],
+      "id": "ade70a10-c3eb-57fc-8c08-5dfeb28bd201"
+    }
+  ],
+  "connections": {
+    "Open draft review": {
+      "main": [
+        [
+          {
+            "node": "Get drafts waiting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When called by eval": {
+      "main": [
+        [
+          {
+            "node": "Get drafts waiting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get drafts waiting": {
+      "main": [
+        [
+          {
+            "node": "Build review page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build review page": {
+      "main": [
+        [
+          {
+            "node": "Eval run?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eval run?": {
+      "main": [
+        [
+          {
+            "node": "Return review result to eval",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Anything pending?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anything pending?": {
+      "main": [
+        [
+          {
+            "node": "Review drafts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nothing to review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Review drafts": {
+      "main": [
+        [
+          {
+            "node": "Prepare decisions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare decisions": {
+      "main": [
+        [
+          {
+            "node": "Anything to save?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anything to save?": {
+      "main": [
+        [
+          {
+            "node": "One row per decision",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nothing saved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One row per decision": {
+      "main": [
+        [
+          {
+            "node": "Save decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save decision": {
+      "main": [
+        [
+          {
+            "node": "Summarize decisions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize decisions": {
+      "main": [
+        [
+          {
+            "node": "Decisions saved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Warsaw",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "tags": []
+}
