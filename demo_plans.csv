@@ -1,0 +1,49 @@
+project_id,seq,stage_key,stage_name,owner,business_days,planned_start,due_date
+P1,1,kickoff,Kickoff,us,2,2026-10-19,2026-10-21
+P1,2,tech_access,Technical access,client,3,2026-10-21,2026-10-26
+P1,3,integration,Integration installed,client,8,2026-10-26,2026-11-05
+P1,4,test_event,First test event,us,2,2026-11-05,2026-11-09
+P1,5,first_value,First value,client,3,2026-11-09,2026-11-12
+P1,6,training,Training,us,2,2026-11-12,2026-11-16
+P1,7,launch,Launch,us,1,2026-11-16,2026-11-17
+P1,8,handover,Handover to CSM,us,2,2026-11-17,2026-11-19
+P2,1,kickoff,Kickoff,us,2,2026-10-21,2026-10-23
+P2,2,tech_access,Technical access,client,4,2026-10-23,2026-10-29
+P2,3,integration,Integration installed,client,9,2026-10-29,2026-11-11
+P2,4,test_event,First test event,us,2,2026-11-11,2026-11-13
+P2,5,first_value,First value,client,3,2026-11-13,2026-11-18
+P2,6,training,Training,us,2,2026-11-18,2026-11-20
+P2,7,launch,Launch,us,1,2026-11-20,2026-11-23
+P2,8,handover,Handover to CSM,us,2,2026-11-23,2026-11-25
+P3,1,kickoff,Kickoff,us,2,2026-10-14,2026-10-16
+P3,2,tech_access,Technical access,client,3,2026-10-16,2026-10-21
+P3,3,integration,Integration installed,client,4,2026-10-21,2026-10-27
+P3,4,test_event,First test event,us,2,2026-10-27,2026-10-29
+P3,5,first_value,First value,client,3,2026-10-29,2026-11-03
+P3,6,training,Training,us,2,2026-11-03,2026-11-05
+P3,7,launch,Launch,us,1,2026-11-05,2026-11-06
+P3,8,handover,Handover to CSM,us,2,2026-11-06,2026-11-10
+P4,1,kickoff,Kickoff,us,2,2026-09-21,2026-09-23
+P4,2,tech_access,Technical access,client,4,2026-09-23,2026-09-29
+P4,3,integration,Integration installed,client,11,2026-09-29,2026-10-14
+P4,4,test_event,First test event,us,2,2026-10-14,2026-10-16
+P4,5,first_value,First value,client,3,2026-10-16,2026-10-21
+P4,6,training,Training,us,2,2026-10-21,2026-10-23
+P4,7,launch,Launch,us,1,2026-10-23,2026-10-26
+P4,8,handover,Handover to CSM,us,2,2026-10-26,2026-10-28
+P5,1,kickoff,Kickoff,us,2,2026-10-05,2026-10-07
+P5,2,tech_access,Technical access,client,3,2026-10-07,2026-10-12
+P5,3,integration,Integration installed,client,6,2026-10-12,2026-10-20
+P5,4,test_event,First test event,us,2,2026-10-20,2026-10-22
+P5,5,first_value,First value,client,3,2026-10-22,2026-10-27
+P5,6,training,Training,us,2,2026-10-27,2026-10-29
+P5,7,launch,Launch,us,1,2026-10-29,2026-10-30
+P5,8,handover,Handover to CSM,us,2,2026-10-30,2026-11-03
+P6,1,kickoff,Kickoff,us,2,2026-10-28,2026-10-30
+P6,2,tech_access,Technical access,client,3,2026-10-30,2026-11-04
+P6,3,integration,Integration installed,us,3,2026-11-04,2026-11-09
+P6,4,test_event,First test import,us,2,2026-11-09,2026-11-11
+P6,5,first_value,First value,client,3,2026-11-11,2026-11-16
+P6,6,training,Training,us,2,2026-11-16,2026-11-18
+P6,7,launch,Launch,us,1,2026-11-18,2026-11-19
+P6,8,handover,Handover to CSM,us,2,2026-11-19,2026-11-23

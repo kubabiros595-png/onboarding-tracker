@@ -1,0 +1,713 @@
+{
+  "name": "OT Stage Update",
+  "nodes": [
+    {
+      "parameters": {
+        "authentication": "n8nUserAuth",
+        "formTitle": "Update an onboarding stage",
+        "formDescription": "Portfolio project on fictional data.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Project ID",
+              "fieldName": "project_id",
+              "fieldType": "text",
+              "requiredField": true,
+              "placeholder": "e.g. OT-261109120000"
+            },
+            {
+              "fieldLabel": "Stage",
+              "fieldName": "stage",
+              "fieldType": "dropdown",
+              "requiredField": true,
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Kickoff"
+                  },
+                  {
+                    "option": "Technical access"
+                  },
+                  {
+                    "option": "Integration installed"
+                  },
+                  {
+                    "option": "First test event / import"
+                  },
+                  {
+                    "option": "First value"
+                  },
+                  {
+                    "option": "Training"
+                  },
+                  {
+                    "option": "Launch"
+                  },
+                  {
+                    "option": "Handover to CSM"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "New status",
+              "fieldName": "status",
+              "fieldType": "dropdown",
+              "requiredField": true,
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "in progress"
+                  },
+                  {
+                    "option": "blocked"
+                  },
+                  {
+                    "option": "done"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Date of the change (empty = today)",
+              "fieldName": "date",
+              "fieldType": "date",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "Note (required when blocked)",
+              "fieldName": "note",
+              "fieldType": "textarea",
+              "requiredField": false
+            }
+          ]
+        },
+        "responseMode": "onReceived",
+        "options": {
+          "buttonLabel": "Save update",
+          "appendAttribution": false
+        }
+      },
+      "name": "Stage update form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        0
+      ],
+      "id": "e47d29fa-6239-58d7-a943-63f147f4b422"
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "name": "When called by eval",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        200
+      ],
+      "id": "17aa4cd8-e087-5f8d-980e-ba3b040a20ac"
+    },
+    {
+      "parameters": {
+        "jsCode": "const warsawToday = () => $now.setZone('Europe/Warsaw').toFormat('yyyy-MM-dd');\n\nconst NAME_TO_KEY = { 'kickoff': 'kickoff', 'technical access': 'tech_access', 'integration installed': 'integration',\n  'first test event / import': 'test_event', 'first test event': 'test_event', 'first test import': 'test_event',\n  'first value': 'first_value', 'training': 'training', 'launch': 'launch', 'handover to csm': 'handover' };\nconst u = $input.first().json;\nconst stageText = String(u.stage_key || u.stage || '').trim();\nreturn [{ json: {\n  eval_run: u.eval_run === true,\n  eval_case: u.eval_case || '',\n  project_id: String(u.project_id || '').trim(),\n  stage_key: NAME_TO_KEY[stageText.toLowerCase()] || stageText,\n  status: u.status,\n  date: String(u.date || '').slice(0, 10),\n  note: u.note || '',\n  today: String(u.today || '').slice(0, 10) || warsawToday(),\n  eval_stages: u.eval_stages || [],\n  eval_project: u.eval_project || null,\n} }];\n"
+      },
+      "name": "Read update",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "id": "e36b5edd-8acc-5c49-b7b3-59b70210a7ff"
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "OT Stages"
+        },
+        "returnAll": true,
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "project_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.project_id }}"
+            }
+          ]
+        }
+      },
+      "name": "Get project stages",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        0
+      ],
+      "id": "339c8e65-387e-5ac1-b2ae-4d2b6382003d",
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "OT Projects"
+        },
+        "returnAll": true,
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "project_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Read update').first().json.project_id }}"
+            }
+          ]
+        }
+      },
+      "name": "Get project",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        0
+      ],
+      "id": "1c4291dc-f44b-58d3-8dbc-27efb4ea74b2",
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===== ONBOARDING RULES: every threshold and the stage template live here. No AI. =====\nconst RULES = {\n  stallBusinessDays: 5,       // current stage with no status change for MORE than this = risk flag\n  redOverdueBusinessDays: 5,  // current stage overdue by MORE than this = red\n};\n\n// Owner \"us\" = our implementation team, \"client\" = the customer's team.\nconst STAGE_TEMPLATE = [\n  { key: 'kickoff',     name: 'Kickoff',               owner: 'us',     days: 2 },\n  { key: 'tech_access', name: 'Technical access',      owner: 'client', days: 3 },\n  { key: 'integration', name: 'Integration installed', owner: 'client', days: 2 },\n  { key: 'test_event',  name: 'First test event',      owner: 'us',     days: 2 },\n  { key: 'first_value', name: 'First value',           owner: 'client', days: 3 },\n  { key: 'training',    name: 'Training',              owner: 'us',     days: 2 },\n  { key: 'launch',      name: 'Launch',                owner: 'us',     days: 1 },\n  { key: 'handover',    name: 'Handover to CSM',       owner: 'us',     days: 2 },\n];\n// Extra business days on \"Integration installed\" for each integration in scope.\nconst INTEGRATION_DAYS = { api: 4, webhook: 2, sso: 3, csv: 1 };\nconst KNOWN_INTEGRATIONS = Object.keys(INTEGRATION_DAYS);\n\n// ---- dates: plain ISO strings (YYYY-MM-DD), business days = Monday to Friday ----\nconst toDate = (iso) => new Date(String(iso).slice(0, 10) + 'T00:00:00Z');\nconst toIso = (d) => d.toISOString().slice(0, 10);\nconst isWeekend = (d) => d.getUTCDay() === 0 || d.getUTCDay() === 6;\nconst addBusinessDays = (iso, n) => {\n  const d = toDate(iso);\n  while (isWeekend(d)) d.setUTCDate(d.getUTCDate() + 1);\n  let left = n;\n  while (left > 0) {\n    d.setUTCDate(d.getUTCDate() + 1);\n    if (!isWeekend(d)) left -= 1;\n  }\n  return toIso(d);\n};\n// Business days after `fromIso` up to and including `toIsoDate`. 0 when toIsoDate <= fromIso.\nconst businessDaysBetween = (fromIso, toIsoDate) => {\n  const d = toDate(fromIso);\n  const end = toDate(toIsoDate);\n  let count = 0;\n  while (d < end) {\n    d.setUTCDate(d.getUTCDate() + 1);\n    if (!isWeekend(d)) count += 1;\n  }\n  return count;\n};\nconst calendarDaysBetween = (fromIso, toIsoDate) =>\n  Math.round((toDate(toIsoDate) - toDate(fromIso)) / 86400000);\nconst MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];\nconst prettyDate = (iso) => { const d = toDate(iso); return d.getUTCDate() + ' ' + MONTHS[d.getUTCMonth()] + ' ' + d.getUTCFullYear(); };\n\nconst parseIntegrations = (value) => {\n  const list = Array.isArray(value) ? value : String(value || '').split(/[,;]+/);\n  return [...new Set(list.map((v) => String(v).trim().toLowerCase())\n    .map((v) => (v.startsWith('csv') ? 'csv' : v))\n    .filter(Boolean))];\n};\n\n// ---- plan from template ----\nfunction buildPlan(contract) {\n  const integrations = parseIntegrations(contract.integrations);\n  const unknown = integrations.filter((i) => !KNOWN_INTEGRATIONS.includes(i));\n  const csvOnly = integrations.length === 1 && integrations[0] === 'csv';\n  const warnings = [];\n  if (!integrations.length) warnings.push('No integration in scope');\n  if (unknown.length) warnings.push('Unknown integration: ' + unknown.join(', '));\n\n  const stages = [];\n  let prevDue = contract.signed_date;\n  STAGE_TEMPLATE.forEach((t, i) => {\n    let days = t.days;\n    let owner = t.owner;\n    let name = t.name;\n    if (t.key === 'tech_access' && integrations.includes('sso')) days += 1; // identity provider admin needed\n    if (t.key === 'integration') {\n      days += integrations.reduce((sum, k) => sum + (INTEGRATION_DAYS[k] || 0), 0);\n      if (csvOnly) owner = 'us'; // we run the import ourselves; nothing to install on their side\n    }\n    if (t.key === 'test_event' && csvOnly) name = 'First test import';\n    const due = addBusinessDays(prevDue, days);\n    stages.push({\n      project_id: contract.project_id,\n      seq: i + 1,\n      stage_key: t.key,\n      stage_name: name,\n      owner,\n      business_days: days,\n      planned_start: prevDue,\n      due_date: due,\n      status: 'not started',\n      status_since: contract.signed_date,\n      done_on: '',\n      note: '',\n    });\n    prevDue = due;\n  });\n  const plannedLaunch = stages.find((s) => s.stage_key === 'launch').due_date;\n  if (contract.target_launch && plannedLaunch > contract.target_launch) {\n    warnings.push('Template plan launches on ' + plannedLaunch + ', after the target ' + contract.target_launch);\n  }\n  return { integrations, csvOnly, stages, plannedLaunch, warnings };\n}\n\n// ---- daily check for one project ----\nfunction checkProject(project, projectStages, today) {\n  const stages = [...projectStages].sort((a, b) => Number(a.seq) - Number(b.seq));\n  const isDone = (s) => String(s.status) === 'done';\n  const current = stages.find((s) => !isDone(s)) || null;\n  const flags = [];\n  const reminders = [];\n  let overdueBd = 0;\n  let stalledBd = 0;\n\n  let effectiveDue = null;\n  if (current) {\n    const prev = stages[stages.indexOf(current) - 1];\n    const prevDone = prev && prev.done_on ? String(prev.done_on).slice(0, 10) : '';\n    // If the previous stage finished late, this stage still gets its normal number of days.\n    // Without this, one late stage would make every later stage \"overdue\" the day it starts.\n    effectiveDue = current.due_date;\n    if (prevDone) {\n      const rebased = addBusinessDays(prevDone, Number(current.business_days));\n      if (rebased > effectiveDue) effectiveDue = rebased;\n    }\n    // The clock starts at the latest of: its own last status change, the day the previous stage finished.\n    const candidates = [current.status_since, prevDone, project.signed_date].filter(Boolean).map((d) => String(d).slice(0, 10));\n    const waitingSince = candidates.sort().slice(-1)[0];\n    stalledBd = businessDaysBetween(waitingSince, today);\n    if (today > effectiveDue) {\n      overdueBd = businessDaysBetween(effectiveDue, today);\n      const who = current.owner === 'client' ? 'client technical contact (' + (project.tech_contact || 'unknown') + ')' : 'our implementation lead';\n      reminders.push({ to: who, owner: current.owner, stage: current.stage_name,\n        text: current.stage_name + ' was due on ' + effectiveDue + ' and is ' + overdueBd + ' business day(s) late.' });\n      flags.push('overdue');\n    }\n    if (String(current.status) === 'blocked') {\n      flags.push(current.owner === 'client' ? 'blocked by client' : 'blocked on our side');\n      if (!flags.includes('overdue')) {\n        const who = current.owner === 'client' ? 'client technical contact (' + (project.tech_contact || 'unknown') + ')' : 'our implementation lead';\n        reminders.push({ to: who, owner: current.owner, stage: current.stage_name, text: current.stage_name + ' is blocked: ' + (current.note || 'no reason given') + '.' });\n      }\n    }\n    if (stalledBd > RULES.stallBusinessDays) flags.push('stalled');\n  }\n\n  // Launch projection: the current stage ends on its due date (or today, if it is late),\n  // then each remaining stage up to launch takes its template number of business days.\n  const launch = stages.find((s) => s.stage_key === 'launch');\n  let projectedLaunch;\n  if (launch && isDone(launch)) projectedLaunch = String(launch.done_on).slice(0, 10);\n  else {\n    const currentEnd = today > effectiveDue ? today : effectiveDue;\n    const remaining = stages.filter((s) => Number(s.seq) > Number(current.seq) && Number(s.seq) <= Number(launch.seq))\n      .reduce((sum, s) => sum + Number(s.business_days), 0);\n    projectedLaunch = addBusinessDays(currentEnd, remaining);\n  }\n  const launchAtRisk = !(launch && isDone(launch)) && project.target_launch && projectedLaunch > project.target_launch;\n  if (launchAtRisk) flags.push('launch at risk');\n\n  let health = 'green';\n  if (flags.includes('stalled') || launchAtRisk || overdueBd > RULES.redOverdueBusinessDays) health = 'red';\n  else if (flags.includes('overdue') || flags.some((f) => f.startsWith('blocked'))) health = 'yellow';\n\n  // Metrics\n  const fv = stages.find((s) => s.stage_key === 'first_value');\n  const ttfv = fv && isDone(fv) ? calendarDaysBetween(project.signed_date, fv.done_on) : null;\n  const done = stages.filter(isDone);\n  const onTime = done.filter((s) => String(s.done_on).slice(0, 10) <= s.due_date);\n\n  return {\n    project_id: project.project_id,\n    client: project.client,\n    check_date: today,\n    current_stage: current ? current.stage_name : 'All stages done',\n    current_owner: current ? current.owner : '',\n    current_status: current ? current.status : 'done',\n    current_due: effectiveDue || '',\n    overdue_bd: overdueBd,\n    stalled_bd: current ? stalledBd : 0,\n    flags,\n    reminders,\n    health,\n    projected_launch: projectedLaunch,\n    target_launch: project.target_launch,\n    launched: Boolean(launch && isDone(launch)),\n    ttfv_days: ttfv,\n    stages_done: done.length,\n    stages_on_time: onTime.length,\n    on_time_pct: done.length ? Math.round((onTime.length / done.length) * 100) : null,\n  };\n}\n\nfunction portfolioMetrics(results) {\n  const ttfvs = results.map((r) => r.ttfv_days).filter((v) => v !== null);\n  const done = results.reduce((s, r) => s + r.stages_done, 0);\n  const onTime = results.reduce((s, r) => s + r.stages_on_time, 0);\n  return {\n    projects: results.length,\n    avg_ttfv_days: ttfvs.length ? Math.round((ttfvs.reduce((a, b) => a + b, 0) / ttfvs.length) * 10) / 10 : null,\n    on_time_pct: done ? Math.round((onTime / done) * 100) : null,\n    at_risk: results.filter((r) => r.health === 'red').length,\n    watch: results.filter((r) => r.health === 'yellow').length,\n    green: results.filter((r) => r.health === 'green').length,\n  };\n}\n\n// ---- stage update ----\nconst ALLOWED_STATUSES = ['not started', 'in progress', 'blocked', 'done'];\nfunction applyStageUpdate(update, projectStages, today) {\n  const stages = [...projectStages].sort((a, b) => Number(a.seq) - Number(b.seq));\n  const status = String(update.status || '').trim().toLowerCase();\n  const date = String(update.date || today).slice(0, 10);\n  const stage = stages.find((s) => s.stage_key === update.stage_key || s.stage_name.toLowerCase() === String(update.stage_key).toLowerCase());\n  if (!stages.length) return { ok: false, error: 'Unknown project ' + update.project_id };\n  if (!stage) return { ok: false, error: 'Unknown stage ' + update.stage_key + ' for ' + update.project_id };\n  if (!ALLOWED_STATUSES.includes(status)) return { ok: false, error: 'Unknown status ' + update.status };\n  if (date > today) return { ok: false, error: 'Date ' + date + ' is in the future' };\n  const earlierOpen = stages.filter((s) => Number(s.seq) < Number(stage.seq) && s.status !== 'done');\n  if (status === 'done' && earlierOpen.length) {\n    return { ok: false, error: stage.stage_name + ' cannot be done while ' + earlierOpen[0].stage_name + ' is still open' };\n  }\n  if (status === 'blocked' && !String(update.note || '').trim()) {\n    return { ok: false, error: 'A blocked stage needs a note saying what blocks it' };\n  }\n  const updated = { ...stage, status, status_since: date, done_on: status === 'done' ? date : '', note: String(update.note || stage.note || '') };\n  const after = stages.map((s) => (s === stage ? updated : s));\n  return { ok: true, row_id: stage.id, stage: updated, stages_after: after, handover_due: stage.stage_key === 'launch' && status === 'done' };\n}\n\n// ---- handover note to the CSM, built by code from the table ----\nfunction buildHandoverNote(project, stages, today) {\n  const sorted = [...stages].sort((a, b) => Number(a.seq) - Number(b.seq));\n  const launch = sorted.find((s) => s.stage_key === 'launch');\n  const fv = sorted.find((s) => s.stage_key === 'first_value');\n  const open = sorted.filter((s) => s.status !== 'done');\n  const late = sorted.filter((s) => s.status === 'done' && String(s.done_on).slice(0, 10) > s.due_date);\n  const withNotes = sorted.filter((s) => String(s.note || '').trim());\n  const ttfv = fv && fv.status === 'done' ? calendarDaysBetween(project.signed_date, fv.done_on) : null;\n  const lines = [\n    'HANDOVER: ' + project.client + ' (' + project.project_id + ')',\n    'State: launched on ' + (launch ? launch.done_on : '?') + ' (target ' + project.target_launch + '). Plan: ' + project.plan + '. Integrations: ' + parseIntegrations(project.integrations).join(', ') + '.',\n    'Time to first value: ' + (ttfv === null ? 'not reached' : ttfv + ' days') + '. Stages done late: ' + (late.length ? late.map((s) => s.stage_name).join(', ') : 'none') + '.',\n    'Open items: ' + (open.length ? open.map((s) => s.stage_name + ' (' + s.owner + ', due ' + s.due_date + ')').join('; ') : 'none') + '.',\n    'Notes from the implementation: ' + (withNotes.length ? withNotes.map((s) => s.stage_name + ': ' + s.note).join('; ') : 'none') + '.',\n    'Contacts: technical contact ' + (project.tech_contact || 'unknown') + '.',\n    'Next step: CSM sends a welcome email within 2 business days, by ' + addBusinessDays(today, 2) + ', and agrees the first check-in in writing.',\n  ];\n  return lines.join('\\n');\n}\n// ===== end of rules =====\n\n// Checks the update against the plan, then builds the handover note if Launch was just closed.\nconst u = $('Read update').first().json;\nconst stages = u.eval_run ? u.eval_stages : $('Get project stages').all().map((i) => i.json).filter((r) => r.project_id);\nconst project = u.eval_run ? u.eval_project : $input.all().map((i) => i.json).find((r) => r.project_id);\nconst result = applyStageUpdate(u, stages, u.today);\nlet handoverNote = '';\nif (result.ok && result.handover_due && project) handoverNote = buildHandoverNote(project, result.stages_after, u.today);\nreturn [{ json: {\n  eval_run: u.eval_run,\n  eval_case: u.eval_case,\n  ok: result.ok,\n  error: result.error || '',\n  row_id: result.row_id || null,\n  project_id: u.project_id,\n  stage: result.stage || null,\n  status: result.stage ? result.stage.status : '',\n  status_since: result.stage ? result.stage.status_since : '',\n  done_on: result.stage ? result.stage.done_on : '',\n  note: result.stage ? result.stage.note : '',\n  handover_note: handoverNote,\n  created_at: $now.setZone('Europe/Warsaw').toFormat('yyyy-MM-dd HH:mm'),\n} }];\n"
+      },
+      "name": "Apply update",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        0
+      ],
+      "id": "9ea753bc-5861-52aa-9253-5b21f4cd78b1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.eval_run === true }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Eval run?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        0
+      ],
+      "id": "8ab4f808-5502-5a13-b53c-b0681468f0f2"
+    },
+    {
+      "parameters": {},
+      "name": "Return result to eval",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        0
+      ],
+      "id": "d4010416-6b69-51f7-8873-fa4f1b6e119b"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok === true }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Update valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1440,
+        200
+      ],
+      "id": "64dc4bdf-44d7-5341-84c5-295bff36ea02"
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "OT Stages"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.row_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "={{ $('Apply update').first().json.status }}",
+            "status_since": "={{ $('Apply update').first().json.status_since }}",
+            "done_on": "={{ $('Apply update').first().json.done_on }}",
+            "note": "={{ $('Apply update').first().json.note }}"
+          },
+          "schema": [
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status_since",
+              "displayName": "status_since",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "done_on",
+              "displayName": "done_on",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "note",
+              "displayName": "note",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Save stage status",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1680,
+        0
+      ],
+      "id": "8ec4b3ee-b8cc-5fcd-9bc6-608b0c6179eb"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Apply update').first().json.handover_note !== '' }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Launch closed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1920,
+        0
+      ],
+      "id": "95d02cc7-4823-5958-8ab0-85239753e0b5"
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "OT Drafts"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "created_at": "={{ $('Apply update').first().json.created_at }}",
+            "project_id": "={{ $('Apply update').first().json.project_id }}",
+            "kind": "handover",
+            "subject": "Handover to CSM",
+            "body": "={{ $('Apply update').first().json.handover_note }}",
+            "check_passed": true,
+            "check_notes": "Built by code from the stage table",
+            "review_status": "pending review",
+            "reviewer_note": ""
+          },
+          "schema": [
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "project_id",
+              "displayName": "project_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "kind",
+              "displayName": "kind",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "subject",
+              "displayName": "subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "body",
+              "displayName": "body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "check_passed",
+              "displayName": "check_passed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "check_notes",
+              "displayName": "check_notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "review_status",
+              "displayName": "review_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "reviewer_note",
+              "displayName": "reviewer_note",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Save handover note for review",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2160,
+        0
+      ],
+      "id": "394ae9be-a7bd-524c-9f58-4ef1e147b3e8"
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "text",
+        "completionTitle": "Update saved",
+        "completionMessage": "={{ $('Apply update').first().json.stage.stage_name }} is now {{ $('Apply update').first().json.status }}.{{ $('Apply update').first().json.handover_note ? ' A handover note for the CSM is waiting for your review.' : '' }}"
+      },
+      "name": "Update saved",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        2400,
+        0
+      ],
+      "id": "25d0ee14-82a2-58ac-b686-3285c054aec6",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "text",
+        "completionTitle": "Update saved",
+        "completionMessage": "={{ $('Apply update').first().json.stage.stage_name }} is now {{ $('Apply update').first().json.status }}."
+      },
+      "name": "Update saved, no handover",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        2160,
+        200
+      ],
+      "id": "8870897a-b072-5eef-8901-12025cc7398e",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "text",
+        "completionTitle": "Update not saved",
+        "completionMessage": "={{ $json.error }}"
+      },
+      "name": "Update rejected",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        1680,
+        200
+      ],
+      "id": "fb845a61-ed4a-5429-aa2e-acc706fbc668"
+    }
+  ],
+  "connections": {
+    "Stage update form": {
+      "main": [
+        [
+          {
+            "node": "Read update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When called by eval": {
+      "main": [
+        [
+          {
+            "node": "Read update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read update": {
+      "main": [
+        [
+          {
+            "node": "Get project stages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get project stages": {
+      "main": [
+        [
+          {
+            "node": "Get project",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get project": {
+      "main": [
+        [
+          {
+            "node": "Apply update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply update": {
+      "main": [
+        [
+          {
+            "node": "Eval run?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eval run?": {
+      "main": [
+        [
+          {
+            "node": "Return result to eval",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update valid?": {
+      "main": [
+        [
+          {
+            "node": "Save stage status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save stage status": {
+      "main": [
+        [
+          {
+            "node": "Launch closed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Launch closed?": {
+      "main": [
+        [
+          {
+            "node": "Save handover note for review",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update saved, no handover",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save handover note for review": {
+      "main": [
+        [
+          {
+            "node": "Update saved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Warsaw",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "tags": []
+}

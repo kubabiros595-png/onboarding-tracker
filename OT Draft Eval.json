@@ -1,0 +1,502 @@
+{
+  "name": "OT Draft Eval",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Run draft eval",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "1e38a08d-a0bd-5b15-b853-f69a3795210e"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===== TEST SCENARIOS: 6 fictional implementations and their history. =====\nconst CONTRACTS = [\n  { project_id: 'P1', client: 'Larkspur Dental Group', plan: 'Growth', tech_contact: 'Mira Okafor (fictional)', integrations: 'api, webhook', signed_date: '2026-10-19', target_launch: '2026-12-04', scenario: 'On plan' },\n  { project_id: 'P2', client: 'Brightmoor Freight', plan: 'Enterprise', tech_contact: 'Tomas Reyes (fictional)', integrations: 'api, sso', signed_date: '2026-10-21', target_launch: '2026-12-11', scenario: 'Stuck on technical access' },\n  { project_id: 'P3', client: 'Quillfeather Books', plan: 'Starter', tech_contact: 'Ines Hartley (fictional)', integrations: 'webhook', signed_date: '2026-10-14', target_launch: '2026-11-27', scenario: 'Blocked by the client' },\n  { project_id: 'P4', client: 'Tidewell Solar', plan: 'Enterprise', tech_contact: 'Jonah Pike (fictional)', integrations: 'api, webhook, sso', signed_date: '2026-09-21', target_launch: '2026-11-06', scenario: 'Late launch' },\n  { project_id: 'P5', client: 'Orchard Lane Insurance', plan: 'Growth', tech_contact: 'Priya Sand (fictional)', integrations: 'api', signed_date: '2026-10-05', target_launch: '2026-11-20', scenario: 'Finished early' },\n  { project_id: 'P6', client: 'Cobalt Ridge Hotels', plan: 'Starter', tech_contact: 'Lena Voss (fictional)', integrations: 'csv import', signed_date: '2026-10-28', target_launch: '2026-11-13', scenario: 'Unusual scope: CSV import only, tight target' },\n];\n\n// [date, stage, status, note]  Each event is what someone would submit in the stage update form that day.\nconst EVENTS = {\n  P1: [\n    ['2026-10-19', 'kickoff', 'in progress'], ['2026-10-21', 'kickoff', 'done'],\n    ['2026-10-21', 'tech_access', 'in progress'], ['2026-10-26', 'tech_access', 'done'],\n    ['2026-10-27', 'integration', 'in progress'], ['2026-11-05', 'integration', 'done'],\n    ['2026-11-05', 'test_event', 'in progress'], ['2026-11-09', 'test_event', 'done'],\n    ['2026-11-09', 'first_value', 'in progress'], ['2026-11-12', 'first_value', 'done'],\n    ['2026-11-12', 'training', 'in progress'], ['2026-11-16', 'training', 'done'],\n  ],\n  P2: [\n    ['2026-10-21', 'kickoff', 'in progress'], ['2026-10-23', 'kickoff', 'done'],\n    ['2026-10-23', 'tech_access', 'in progress', 'Waiting for API keys and SSO metadata'],\n    ['2026-10-27', 'tech_access', 'in progress', 'API keys requested again from the client IT team'],\n  ],\n  P3: [\n    ['2026-10-14', 'kickoff', 'in progress'], ['2026-10-16', 'kickoff', 'done'],\n    ['2026-10-16', 'tech_access', 'in progress'], ['2026-10-21', 'tech_access', 'done'],\n    ['2026-10-21', 'integration', 'in progress'], ['2026-10-27', 'integration', 'done'],\n    ['2026-10-27', 'test_event', 'in progress'], ['2026-10-29', 'test_event', 'done'],\n    ['2026-10-29', 'first_value', 'in progress'],\n    ['2026-11-05', 'first_value', 'blocked', 'Waiting for the client product catalogue export'],\n  ],\n  P4: [\n    ['2026-09-21', 'kickoff', 'in progress'], ['2026-09-23', 'kickoff', 'done'],\n    ['2026-09-23', 'tech_access', 'in progress'], ['2026-09-30', 'tech_access', 'done'],\n    ['2026-09-30', 'integration', 'in progress'], ['2026-10-20', 'integration', 'done', 'SSO certificate had to be reissued'],\n    ['2026-10-20', 'test_event', 'in progress'], ['2026-10-22', 'test_event', 'done'],\n    ['2026-10-22', 'first_value', 'in progress'], ['2026-10-27', 'first_value', 'done'],\n    ['2026-10-27', 'training', 'in progress'], ['2026-11-04', 'training', 'done', 'Training moved twice by the client'],\n    ['2026-11-04', 'launch', 'in progress'], ['2026-11-12', 'launch', 'done'],\n  ],\n  P5: [\n    ['2026-10-05', 'kickoff', 'in progress'], ['2026-10-06', 'kickoff', 'done'],\n    ['2026-10-06', 'tech_access', 'in progress'], ['2026-10-09', 'tech_access', 'done'],\n    ['2026-10-09', 'integration', 'in progress'], ['2026-10-16', 'integration', 'done'],\n    ['2026-10-16', 'test_event', 'in progress'], ['2026-10-19', 'test_event', 'done'],\n    ['2026-10-19', 'first_value', 'in progress'], ['2026-10-21', 'first_value', 'done'],\n    ['2026-10-21', 'training', 'in progress'], ['2026-10-23', 'training', 'done', 'Client asked for a second session for the support team'],\n    ['2026-10-23', 'launch', 'in progress'], ['2026-10-26', 'launch', 'done'],\n    ['2026-10-26', 'handover', 'in progress'], ['2026-10-28', 'handover', 'done'],\n  ],\n  P6: [\n    ['2026-10-28', 'kickoff', 'in progress'], ['2026-10-30', 'kickoff', 'done'],\n    ['2026-10-30', 'tech_access', 'in progress'], ['2026-11-03', 'tech_access', 'done'],\n    ['2026-11-03', 'integration', 'in progress'], ['2026-11-06', 'integration', 'done'],\n    ['2026-11-09', 'test_event', 'in progress'],\n  ],\n};\n\nconst SIM_DATES = ['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-09', '2026-11-16'];\n\n// Replays the events up to `today` on top of a freshly built plan.\nfunction stateOn(planStages, events, today) {\n  const stages = planStages.map((s) => ({ ...s }));\n  (events || []).filter((e) => e[0] <= today).forEach(([date, key, status, note]) => {\n    const s = stages.find((x) => x.stage_key === key);\n    s.status = status;\n    s.status_since = date;\n    s.done_on = status === 'done' ? date : '';\n    if (note) s.note = note;\n  });\n  return stages;\n}\n\nconst CANARIES = [\n  { id: 'C1', project_id: 'P2', kind: 'weekly_status', expect: 'date not in the plan', what: 'Invented deadline',\n    subject: 'Brightmoor Freight: technical access', body: 'Hi [CLIENT] team,\\n\\nTechnical access is still open. It was due on 29 October 2026. Could your team send the API keys and SSO metadata by 17 November 2026?\\n\\nBest regards,\\nImplementation team' },\n  { id: 'C2', project_id: 'P2', kind: 'weekly_status', expect: 'offers to do the client task', what: 'Offers to do the client side for them',\n    subject: 'Technical access', body: 'Hi [CLIENT] team,\\n\\nTechnical access was due on 29 October 2026. To save time, we will set up the Technical access for you on your behalf.\\n\\nBest regards,\\nImplementation team' },\n  { id: 'C3', project_id: 'P3', kind: 'weekly_status', expect: 'says an open stage is done', what: 'Claims an open stage is done',\n    subject: 'Good news', body: 'Hi [CLIENT] team,\\n\\nFirst value is complete and Training is next, due on 5 November 2026.\\n\\nBest regards,\\nImplementation team' },\n  { id: 'C4', project_id: 'P6', kind: 'weekly_status', expect: 'free work or discount', what: 'Offers free extra work',\n    subject: 'First test import', body: 'Hi [CLIENT] team,\\n\\nFirst test import is due on 11 November 2026. We can also clean your old guest lists free of charge.\\n\\nBest regards,\\nImplementation team' },\n  { id: 'C5', project_id: 'P6', kind: 'weekly_status', expect: 'says on track while health is', what: 'Says on track while the launch is at risk',\n    subject: 'All on track', body: 'Hi [CLIENT] team,\\n\\nFirst test import is due on 11 November 2026 and everything is on track for your launch.\\n\\nBest regards,\\nImplementation team' },\n  { id: 'C6', project_id: 'P3', kind: 'weekly_status', expect: 'asks for something by a date that has passed', what: 'Asks for a file by a date in the past',\n    subject: 'First value', body: 'Hi [CLIENT] team,\\n\\nFirst value is blocked. Please send the catalogue export by 3 November 2026.\\n\\nBest regards,\\nImplementation team' },\n];\n\nreturn [{ json: { CONTRACTS, EVENTS, CANARIES } }];\n"
+      },
+      "name": "Test scenarios",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "id": "3636e4fd-da0c-5e8f-89c3-ba3624d62b7b"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nreturn $input.first().json.CONTRACTS.map((c) => ({ json: { ...c, eval_run: true } }));\n"
+      },
+      "name": "Build test contracts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ],
+      "id": "2ee8ad6d-64f8-5eae-8b96-56fcfb51d615"
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "OT Contract Signed"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "name": "Build plans with OT Contract Signed",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4,
+      "position": [
+        720,
+        0
+      ],
+      "id": "15aa1ba1-28f4-5fd6-ac9c-2d49265ab377"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Same history as the rules eval, frozen on one date. Both email types for every open project = 10 drafts.\nconst { EVENTS, CANARIES } = $('Test scenarios').first().json;\nconst TODAY = '2026-11-09';\nconst stateOn = (planStages, events) => {\n  const stages = planStages.map((s) => ({ ...s }));\n  (events || []).filter((e) => e[0] <= TODAY).forEach(([date, key, status, note]) => {\n    const s = stages.find((x) => x.stage_key === key);\n    s.status = status; s.status_since = date; s.done_on = status === 'done' ? date : '';\n    if (note) s.note = note;\n  });\n  return stages;\n};\nconst plans = $input.all().map((i) => i.json);\nreturn [{ json: {\n  eval_run: true, today: TODAY, draft_mode: 'both', eval_canaries: CANARIES,\n  eval_projects: plans.map(({ stages, ...p }) => p),\n  eval_stages: plans.flatMap((p) => stateOn(p.stages, EVENTS[p.project_id])),\n} }];\n"
+      },
+      "name": "State on 9 November",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        0
+      ],
+      "id": "8d6cc1d7-7b83-5abd-8842-8e612f3ca5c1"
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "OT Drafts"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "name": "Write and check drafts with OT Drafts",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4,
+      "position": [
+        1200,
+        0
+      ],
+      "id": "01a1bead-79b2-5912-a63e-76703c80c75a"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst runAt = $now.setZone('Europe/Warsaw').toFormat('yyyy-MM-dd HH:mm');\nconst runId = 'drafts-' + $now.toFormat('yyyyMMddHHmmss');\nconst rows = $input.all().map((i, n) => {\n  const d = i.json;\n  if (d.is_canary) {\n    const caught = String(d.check_notes).split(' | ').some((f) => f.startsWith(d.expect));\n    return { run_id: runId, run_at: runAt, suite: 'drafts', checkpoint: d.canary_id, project: d.project_id, sim_date: '2026-11-09',\n      what_it_tests: 'Canary: ' + d.what, expected: 'flag: ' + d.expect, actual: caught ? 'flag: ' + d.expect : 'not caught (' + d.check_notes + ')', passed: caught, detail: d.check_notes };\n  }\n  return { run_id: runId, run_at: runAt, suite: 'drafts', checkpoint: 'D' + String(n + 1).padStart(2, '0'), project: d.project_id, sim_date: '2026-11-09',\n    what_it_tests: 'AI draft (' + d.kind + '): dates and stages match the table, nothing promised outside scope', expected: 'All checks passed',\n    actual: d.check_notes, passed: d.check_passed === true, detail: d.subject + ' || ' + d.body };\n});\nconst drafts = rows.filter((r) => r.checkpoint.startsWith('D'));\nconst canaries = rows.filter((r) => r.checkpoint.startsWith('C'));\nconst summary = { checkpoints: rows.length, passed: rows.filter((r) => r.passed).length, failed: rows.filter((r) => !r.passed).length,\n  pass_pct: Math.round((rows.filter((r) => r.passed).length / rows.length) * 100), false_flags: 0,\n  missed_flags: canaries.filter((r) => !r.passed).length,\n  mistakes: 'AI drafts passed ' + drafts.filter((r) => r.passed).length + '/' + drafts.length + '; canaries caught ' + canaries.filter((r) => r.passed).length + '/' + canaries.length + '. ' +\n    rows.filter((r) => !r.passed).map((r) => r.checkpoint + ': ' + r.actual).join(' || ') };\nreturn rows.map((r) => ({ json: { ...r, summary } }));\n"
+      },
+      "name": "Score drafts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        0
+      ],
+      "id": "7bfac83a-223c-5855-86b1-562c2eb56dce"
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "OT Eval Results"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "run_id": "={{ $json.run_id }}",
+            "run_at": "={{ $json.run_at }}",
+            "suite": "={{ $json.suite }}",
+            "checkpoint": "={{ $json.checkpoint }}",
+            "project": "={{ $json.project }}",
+            "sim_date": "={{ $json.sim_date }}",
+            "what_it_tests": "={{ $json.what_it_tests }}",
+            "expected": "={{ $json.expected }}",
+            "actual": "={{ $json.actual }}",
+            "passed": "={{ $json.passed }}",
+            "detail": "={{ $json.detail }}"
+          },
+          "schema": [
+            {
+              "id": "run_id",
+              "displayName": "run_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "run_at",
+              "displayName": "run_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "suite",
+              "displayName": "suite",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "checkpoint",
+              "displayName": "checkpoint",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "project",
+              "displayName": "project",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sim_date",
+              "displayName": "sim_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "what_it_tests",
+              "displayName": "what_it_tests",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "expected",
+              "displayName": "expected",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "actual",
+              "displayName": "actual",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "passed",
+              "displayName": "passed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "detail",
+              "displayName": "detail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Save draft results",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1680,
+        0
+      ],
+      "id": "5ace09a1-795b-59ca-ae05-6c0a547ddd18"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst first = $('Score drafts').first().json;\nreturn [{ json: { run_id: first.run_id, run_at: first.run_at, suite: 'drafts', ...first.summary } }];\n"
+      },
+      "name": "Summarize run",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        0
+      ],
+      "id": "2c93d5c7-41b4-5559-b938-41ed1c5f9445",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "OT Eval Runs"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "run_id": "={{ $json.run_id }}",
+            "run_at": "={{ $json.run_at }}",
+            "suite": "={{ $json.suite }}",
+            "checkpoints": "={{ $json.checkpoints }}",
+            "passed": "={{ $json.passed }}",
+            "failed": "={{ $json.failed }}",
+            "pass_pct": "={{ $json.pass_pct }}",
+            "false_flags": "={{ $json.false_flags }}",
+            "missed_flags": "={{ $json.missed_flags }}",
+            "mistakes": "={{ $json.mistakes }}"
+          },
+          "schema": [
+            {
+              "id": "run_id",
+              "displayName": "run_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "run_at",
+              "displayName": "run_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "suite",
+              "displayName": "suite",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "checkpoints",
+              "displayName": "checkpoints",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "passed",
+              "displayName": "passed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "failed",
+              "displayName": "failed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "pass_pct",
+              "displayName": "pass_pct",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "false_flags",
+              "displayName": "false_flags",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "missed_flags",
+              "displayName": "missed_flags",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "mistakes",
+              "displayName": "mistakes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Save run summary",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2160,
+        0
+      ],
+      "id": "e8546581-8e60-5ce9-8579-37eba4d05459"
+    }
+  ],
+  "connections": {
+    "Run draft eval": {
+      "main": [
+        [
+          {
+            "node": "Test scenarios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test scenarios": {
+      "main": [
+        [
+          {
+            "node": "Build test contracts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build test contracts": {
+      "main": [
+        [
+          {
+            "node": "Build plans with OT Contract Signed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build plans with OT Contract Signed": {
+      "main": [
+        [
+          {
+            "node": "State on 9 November",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "State on 9 November": {
+      "main": [
+        [
+          {
+            "node": "Write and check drafts with OT Drafts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write and check drafts with OT Drafts": {
+      "main": [
+        [
+          {
+            "node": "Score drafts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score drafts": {
+      "main": [
+        [
+          {
+            "node": "Save draft results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save draft results": {
+      "main": [
+        [
+          {
+            "node": "Summarize run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize run": {
+      "main": [
+        [
+          {
+            "node": "Save run summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Warsaw",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "tags": []
+}

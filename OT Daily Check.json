@@ -1,0 +1,419 @@
+{
+  "name": "OT Daily Check",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "45 7 * * 1-5"
+            }
+          ]
+        }
+      },
+      "name": "Weekdays at 7:45",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "b179f945-6328-5e86-b5a0-49cd8949f9ac"
+    },
+    {
+      "parameters": {},
+      "name": "Run manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        200
+      ],
+      "id": "15fab31c-2610-52c8-bc84-a24958f1ceef"
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "name": "When called by eval",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        400
+      ],
+      "id": "e221fcaf-daba-51d9-b9be-9be292600417"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "sim-today",
+              "name": "today",
+              "value": "={{ $json.today || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Simulated today",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ],
+      "id": "3e7f74bf-658b-510d-b169-1ad682a8ea5d"
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "OT Projects"
+        },
+        "returnAll": true
+      },
+      "name": "Get projects",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        0
+      ],
+      "id": "2185b818-4cb8-5d4c-b96e-f7323786a553",
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "OT Stages"
+        },
+        "returnAll": true
+      },
+      "name": "Get stages",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        0
+      ],
+      "id": "ddf93d4d-a425-54e2-b01d-2d6f44bd24be",
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===== ONBOARDING RULES: every threshold and the stage template live here. No AI. =====\nconst RULES = {\n  stallBusinessDays: 5,       // current stage with no status change for MORE than this = risk flag\n  redOverdueBusinessDays: 5,  // current stage overdue by MORE than this = red\n};\n\n// Owner \"us\" = our implementation team, \"client\" = the customer's team.\nconst STAGE_TEMPLATE = [\n  { key: 'kickoff',     name: 'Kickoff',               owner: 'us',     days: 2 },\n  { key: 'tech_access', name: 'Technical access',      owner: 'client', days: 3 },\n  { key: 'integration', name: 'Integration installed', owner: 'client', days: 2 },\n  { key: 'test_event',  name: 'First test event',      owner: 'us',     days: 2 },\n  { key: 'first_value', name: 'First value',           owner: 'client', days: 3 },\n  { key: 'training',    name: 'Training',              owner: 'us',     days: 2 },\n  { key: 'launch',      name: 'Launch',                owner: 'us',     days: 1 },\n  { key: 'handover',    name: 'Handover to CSM',       owner: 'us',     days: 2 },\n];\n// Extra business days on \"Integration installed\" for each integration in scope.\nconst INTEGRATION_DAYS = { api: 4, webhook: 2, sso: 3, csv: 1 };\nconst KNOWN_INTEGRATIONS = Object.keys(INTEGRATION_DAYS);\n\n// ---- dates: plain ISO strings (YYYY-MM-DD), business days = Monday to Friday ----\nconst toDate = (iso) => new Date(String(iso).slice(0, 10) + 'T00:00:00Z');\nconst toIso = (d) => d.toISOString().slice(0, 10);\nconst isWeekend = (d) => d.getUTCDay() === 0 || d.getUTCDay() === 6;\nconst addBusinessDays = (iso, n) => {\n  const d = toDate(iso);\n  while (isWeekend(d)) d.setUTCDate(d.getUTCDate() + 1);\n  let left = n;\n  while (left > 0) {\n    d.setUTCDate(d.getUTCDate() + 1);\n    if (!isWeekend(d)) left -= 1;\n  }\n  return toIso(d);\n};\n// Business days after `fromIso` up to and including `toIsoDate`. 0 when toIsoDate <= fromIso.\nconst businessDaysBetween = (fromIso, toIsoDate) => {\n  const d = toDate(fromIso);\n  const end = toDate(toIsoDate);\n  let count = 0;\n  while (d < end) {\n    d.setUTCDate(d.getUTCDate() + 1);\n    if (!isWeekend(d)) count += 1;\n  }\n  return count;\n};\nconst calendarDaysBetween = (fromIso, toIsoDate) =>\n  Math.round((toDate(toIsoDate) - toDate(fromIso)) / 86400000);\nconst MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];\nconst prettyDate = (iso) => { const d = toDate(iso); return d.getUTCDate() + ' ' + MONTHS[d.getUTCMonth()] + ' ' + d.getUTCFullYear(); };\n\nconst parseIntegrations = (value) => {\n  const list = Array.isArray(value) ? value : String(value || '').split(/[,;]+/);\n  return [...new Set(list.map((v) => String(v).trim().toLowerCase())\n    .map((v) => (v.startsWith('csv') ? 'csv' : v))\n    .filter(Boolean))];\n};\n\n// ---- plan from template ----\nfunction buildPlan(contract) {\n  const integrations = parseIntegrations(contract.integrations);\n  const unknown = integrations.filter((i) => !KNOWN_INTEGRATIONS.includes(i));\n  const csvOnly = integrations.length === 1 && integrations[0] === 'csv';\n  const warnings = [];\n  if (!integrations.length) warnings.push('No integration in scope');\n  if (unknown.length) warnings.push('Unknown integration: ' + unknown.join(', '));\n\n  const stages = [];\n  let prevDue = contract.signed_date;\n  STAGE_TEMPLATE.forEach((t, i) => {\n    let days = t.days;\n    let owner = t.owner;\n    let name = t.name;\n    if (t.key === 'tech_access' && integrations.includes('sso')) days += 1; // identity provider admin needed\n    if (t.key === 'integration') {\n      days += integrations.reduce((sum, k) => sum + (INTEGRATION_DAYS[k] || 0), 0);\n      if (csvOnly) owner = 'us'; // we run the import ourselves; nothing to install on their side\n    }\n    if (t.key === 'test_event' && csvOnly) name = 'First test import';\n    const due = addBusinessDays(prevDue, days);\n    stages.push({\n      project_id: contract.project_id,\n      seq: i + 1,\n      stage_key: t.key,\n      stage_name: name,\n      owner,\n      business_days: days,\n      planned_start: prevDue,\n      due_date: due,\n      status: 'not started',\n      status_since: contract.signed_date,\n      done_on: '',\n      note: '',\n    });\n    prevDue = due;\n  });\n  const plannedLaunch = stages.find((s) => s.stage_key === 'launch').due_date;\n  if (contract.target_launch && plannedLaunch > contract.target_launch) {\n    warnings.push('Template plan launches on ' + plannedLaunch + ', after the target ' + contract.target_launch);\n  }\n  return { integrations, csvOnly, stages, plannedLaunch, warnings };\n}\n\n// ---- daily check for one project ----\nfunction checkProject(project, projectStages, today) {\n  const stages = [...projectStages].sort((a, b) => Number(a.seq) - Number(b.seq));\n  const isDone = (s) => String(s.status) === 'done';\n  const current = stages.find((s) => !isDone(s)) || null;\n  const flags = [];\n  const reminders = [];\n  let overdueBd = 0;\n  let stalledBd = 0;\n\n  let effectiveDue = null;\n  if (current) {\n    const prev = stages[stages.indexOf(current) - 1];\n    const prevDone = prev && prev.done_on ? String(prev.done_on).slice(0, 10) : '';\n    // If the previous stage finished late, this stage still gets its normal number of days.\n    // Without this, one late stage would make every later stage \"overdue\" the day it starts.\n    effectiveDue = current.due_date;\n    if (prevDone) {\n      const rebased = addBusinessDays(prevDone, Number(current.business_days));\n      if (rebased > effectiveDue) effectiveDue = rebased;\n    }\n    // The clock starts at the latest of: its own last status change, the day the previous stage finished.\n    const candidates = [current.status_since, prevDone, project.signed_date].filter(Boolean).map((d) => String(d).slice(0, 10));\n    const waitingSince = candidates.sort().slice(-1)[0];\n    stalledBd = businessDaysBetween(waitingSince, today);\n    if (today > effectiveDue) {\n      overdueBd = businessDaysBetween(effectiveDue, today);\n      const who = current.owner === 'client' ? 'client technical contact (' + (project.tech_contact || 'unknown') + ')' : 'our implementation lead';\n      reminders.push({ to: who, owner: current.owner, stage: current.stage_name,\n        text: current.stage_name + ' was due on ' + effectiveDue + ' and is ' + overdueBd + ' business day(s) late.' });\n      flags.push('overdue');\n    }\n    if (String(current.status) === 'blocked') {\n      flags.push(current.owner === 'client' ? 'blocked by client' : 'blocked on our side');\n      if (!flags.includes('overdue')) {\n        const who = current.owner === 'client' ? 'client technical contact (' + (project.tech_contact || 'unknown') + ')' : 'our implementation lead';\n        reminders.push({ to: who, owner: current.owner, stage: current.stage_name, text: current.stage_name + ' is blocked: ' + (current.note || 'no reason given') + '.' });\n      }\n    }\n    if (stalledBd > RULES.stallBusinessDays) flags.push('stalled');\n  }\n\n  // Launch projection: the current stage ends on its due date (or today, if it is late),\n  // then each remaining stage up to launch takes its template number of business days.\n  const launch = stages.find((s) => s.stage_key === 'launch');\n  let projectedLaunch;\n  if (launch && isDone(launch)) projectedLaunch = String(launch.done_on).slice(0, 10);\n  else {\n    const currentEnd = today > effectiveDue ? today : effectiveDue;\n    const remaining = stages.filter((s) => Number(s.seq) > Number(current.seq) && Number(s.seq) <= Number(launch.seq))\n      .reduce((sum, s) => sum + Number(s.business_days), 0);\n    projectedLaunch = addBusinessDays(currentEnd, remaining);\n  }\n  const launchAtRisk = !(launch && isDone(launch)) && project.target_launch && projectedLaunch > project.target_launch;\n  if (launchAtRisk) flags.push('launch at risk');\n\n  let health = 'green';\n  if (flags.includes('stalled') || launchAtRisk || overdueBd > RULES.redOverdueBusinessDays) health = 'red';\n  else if (flags.includes('overdue') || flags.some((f) => f.startsWith('blocked'))) health = 'yellow';\n\n  // Metrics\n  const fv = stages.find((s) => s.stage_key === 'first_value');\n  const ttfv = fv && isDone(fv) ? calendarDaysBetween(project.signed_date, fv.done_on) : null;\n  const done = stages.filter(isDone);\n  const onTime = done.filter((s) => String(s.done_on).slice(0, 10) <= s.due_date);\n\n  return {\n    project_id: project.project_id,\n    client: project.client,\n    check_date: today,\n    current_stage: current ? current.stage_name : 'All stages done',\n    current_owner: current ? current.owner : '',\n    current_status: current ? current.status : 'done',\n    current_due: effectiveDue || '',\n    overdue_bd: overdueBd,\n    stalled_bd: current ? stalledBd : 0,\n    flags,\n    reminders,\n    health,\n    projected_launch: projectedLaunch,\n    target_launch: project.target_launch,\n    launched: Boolean(launch && isDone(launch)),\n    ttfv_days: ttfv,\n    stages_done: done.length,\n    stages_on_time: onTime.length,\n    on_time_pct: done.length ? Math.round((onTime.length / done.length) * 100) : null,\n  };\n}\n\nfunction portfolioMetrics(results) {\n  const ttfvs = results.map((r) => r.ttfv_days).filter((v) => v !== null);\n  const done = results.reduce((s, r) => s + r.stages_done, 0);\n  const onTime = results.reduce((s, r) => s + r.stages_on_time, 0);\n  return {\n    projects: results.length,\n    avg_ttfv_days: ttfvs.length ? Math.round((ttfvs.reduce((a, b) => a + b, 0) / ttfvs.length) * 10) / 10 : null,\n    on_time_pct: done ? Math.round((onTime / done) * 100) : null,\n    at_risk: results.filter((r) => r.health === 'red').length,\n    watch: results.filter((r) => r.health === 'yellow').length,\n    green: results.filter((r) => r.health === 'green').length,\n  };\n}\n\n// ---- stage update ----\nconst ALLOWED_STATUSES = ['not started', 'in progress', 'blocked', 'done'];\nfunction applyStageUpdate(update, projectStages, today) {\n  const stages = [...projectStages].sort((a, b) => Number(a.seq) - Number(b.seq));\n  const status = String(update.status || '').trim().toLowerCase();\n  const date = String(update.date || today).slice(0, 10);\n  const stage = stages.find((s) => s.stage_key === update.stage_key || s.stage_name.toLowerCase() === String(update.stage_key).toLowerCase());\n  if (!stages.length) return { ok: false, error: 'Unknown project ' + update.project_id };\n  if (!stage) return { ok: false, error: 'Unknown stage ' + update.stage_key + ' for ' + update.project_id };\n  if (!ALLOWED_STATUSES.includes(status)) return { ok: false, error: 'Unknown status ' + update.status };\n  if (date > today) return { ok: false, error: 'Date ' + date + ' is in the future' };\n  const earlierOpen = stages.filter((s) => Number(s.seq) < Number(stage.seq) && s.status !== 'done');\n  if (status === 'done' && earlierOpen.length) {\n    return { ok: false, error: stage.stage_name + ' cannot be done while ' + earlierOpen[0].stage_name + ' is still open' };\n  }\n  if (status === 'blocked' && !String(update.note || '').trim()) {\n    return { ok: false, error: 'A blocked stage needs a note saying what blocks it' };\n  }\n  const updated = { ...stage, status, status_since: date, done_on: status === 'done' ? date : '', note: String(update.note || stage.note || '') };\n  const after = stages.map((s) => (s === stage ? updated : s));\n  return { ok: true, row_id: stage.id, stage: updated, stages_after: after, handover_due: stage.stage_key === 'launch' && status === 'done' };\n}\n\n// ---- handover note to the CSM, built by code from the table ----\nfunction buildHandoverNote(project, stages, today) {\n  const sorted = [...stages].sort((a, b) => Number(a.seq) - Number(b.seq));\n  const launch = sorted.find((s) => s.stage_key === 'launch');\n  const fv = sorted.find((s) => s.stage_key === 'first_value');\n  const open = sorted.filter((s) => s.status !== 'done');\n  const late = sorted.filter((s) => s.status === 'done' && String(s.done_on).slice(0, 10) > s.due_date);\n  const withNotes = sorted.filter((s) => String(s.note || '').trim());\n  const ttfv = fv && fv.status === 'done' ? calendarDaysBetween(project.signed_date, fv.done_on) : null;\n  const lines = [\n    'HANDOVER: ' + project.client + ' (' + project.project_id + ')',\n    'State: launched on ' + (launch ? launch.done_on : '?') + ' (target ' + project.target_launch + '). Plan: ' + project.plan + '. Integrations: ' + parseIntegrations(project.integrations).join(', ') + '.',\n    'Time to first value: ' + (ttfv === null ? 'not reached' : ttfv + ' days') + '. Stages done late: ' + (late.length ? late.map((s) => s.stage_name).join(', ') : 'none') + '.',\n    'Open items: ' + (open.length ? open.map((s) => s.stage_name + ' (' + s.owner + ', due ' + s.due_date + ')').join('; ') : 'none') + '.',\n    'Notes from the implementation: ' + (withNotes.length ? withNotes.map((s) => s.stage_name + ': ' + s.note).join('; ') : 'none') + '.',\n    'Contacts: technical contact ' + (project.tech_contact || 'unknown') + '.',\n    'Next step: CSM sends a welcome email within 2 business days, by ' + addBusinessDays(today, 2) + ', and agrees the first check-in in writing.',\n  ];\n  return lines.join('\\n');\n}\n// ===== end of rules =====\n\n// \"Simulated today\": empty = the real date in Warsaw. Type a date (YYYY-MM-DD) there to replay any day.\nconst input = $('Simulated today').first().json;\nconst today = String(input.today || '').slice(0, 10) || $now.setZone('Europe/Warsaw').toFormat('yyyy-MM-dd');\nconst evalRun = input.eval_run === true;\nconst projects = evalRun ? input.eval_projects : $('Get projects').all().map((i) => i.json).filter((p) => p.project_id);\nconst stages = evalRun ? input.eval_stages : $input.all().map((i) => i.json).filter((s) => s.project_id);\n\nconst results = projects\n  .filter((p) => String(p.signed_date).slice(0, 10) <= today)\n  .map((p) => checkProject(p, stages.filter((s) => s.project_id === p.project_id), today));\nconst portfolio = portfolioMetrics(results);\nconst summary = 'At risk (red): ' + portfolio.at_risk + ', watch (yellow): ' + portfolio.watch + ', green: ' + portfolio.green +\n  '. Avg time to first value: ' + (portfolio.avg_ttfv_days === null ? '-' : portfolio.avg_ttfv_days + ' days') +\n  '. Stages on time: ' + (portfolio.on_time_pct === null ? '-' : portfolio.on_time_pct + '%') + '.';\n\nconst rows = results.map((r) => ({ json: { ...r, eval_run: evalRun, row_type: 'project',\n  flags_text: r.flags.join(', '), reminders_text: r.reminders.map((m) => 'To ' + m.to + ': ' + m.text).join(' | '),\n  summary: r.current_stage + ' (' + (r.current_owner || '-') + '), projected launch ' + r.projected_launch + ', target ' + r.target_launch } }));\nrows.push({ json: { eval_run: evalRun, row_type: 'portfolio', check_date: today, project_id: 'ALL', client: 'All implementations',\n  health: portfolio.at_risk ? 'red' : portfolio.watch ? 'yellow' : 'green', flags_text: '', reminders_text: '', current_stage: '',\n  projected_launch: '', ttfv_days: portfolio.avg_ttfv_days, on_time_pct: portfolio.on_time_pct, summary, portfolio } });\nreturn rows;\n"
+      },
+      "name": "Check implementations",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        0
+      ],
+      "id": "b49b29c4-d87e-5c64-8d30-7aa2998c94eb"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.eval_run === true }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Eval run?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        0
+      ],
+      "id": "c0df1bff-2002-5a77-8122-65eaefb53f0d"
+    },
+    {
+      "parameters": {},
+      "name": "Return result to eval",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        0
+      ],
+      "id": "d731bd97-3a4b-544d-9b69-e4a9a89268b0"
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "OT Daily Log"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "check_date": "={{ $json.check_date }}",
+            "project_id": "={{ $json.project_id }}",
+            "client": "={{ $json.client }}",
+            "health": "={{ $json.health }}",
+            "flags": "={{ $json.flags_text }}",
+            "reminders": "={{ $json.reminders_text }}",
+            "current_stage": "={{ $json.current_stage }}",
+            "projected_launch": "={{ $json.projected_launch }}",
+            "ttfv_days": "={{ $json.ttfv_days }}",
+            "on_time_pct": "={{ $json.on_time_pct }}",
+            "summary": "={{ $json.summary }}"
+          },
+          "schema": [
+            {
+              "id": "check_date",
+              "displayName": "check_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "project_id",
+              "displayName": "project_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "client",
+              "displayName": "client",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "health",
+              "displayName": "health",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "flags",
+              "displayName": "flags",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "reminders",
+              "displayName": "reminders",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "current_stage",
+              "displayName": "current_stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "projected_launch",
+              "displayName": "projected_launch",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ttfv_days",
+              "displayName": "ttfv_days",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "on_time_pct",
+              "displayName": "on_time_pct",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "summary",
+              "displayName": "summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Save daily log",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1440,
+        200
+      ],
+      "id": "3bbda379-6c07-5d71-a91d-68ec102c43b7"
+    }
+  ],
+  "connections": {
+    "Weekdays at 7:45": {
+      "main": [
+        [
+          {
+            "node": "Simulated today",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run manually": {
+      "main": [
+        [
+          {
+            "node": "Simulated today",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When called by eval": {
+      "main": [
+        [
+          {
+            "node": "Simulated today",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simulated today": {
+      "main": [
+        [
+          {
+            "node": "Get projects",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get projects": {
+      "main": [
+        [
+          {
+            "node": "Get stages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get stages": {
+      "main": [
+        [
+          {
+            "node": "Check implementations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check implementations": {
+      "main": [
+        [
+          {
+            "node": "Eval run?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eval run?": {
+      "main": [
+        [
+          {
+            "node": "Return result to eval",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save daily log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Warsaw",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "tags": []
+}

@@ -1,0 +1,47 @@
+run,run_id,run_at,checkpoint,project,kind,expected,actual,passed,subject,manual_review
+1,drafts-20261109195307,2026-11-09 19:53,D01,P1,kickoff,All checks passed,All checks passed,True,Welcome: your onboarding plan starts now,OK
+1,drafts-20261109195307,2026-11-09 19:53,D02,P1,weekly_status,All checks passed,All checks passed,True,Weekly onboarding status update and next steps,OK
+1,drafts-20261109195307,2026-11-09 19:53,D03,P2,kickoff,All checks passed,All checks passed,True,Welcome aboard: your onboarding plan starts,OK
+1,drafts-20261109195307,2026-11-09 19:53,D04,P2,weekly_status,All checks passed,All checks passed,True,Weekly onboarding status update: Technical access next,OK
+1,drafts-20261109195307,2026-11-09 19:53,D05,P3,kickoff,All checks passed,All checks passed,True,Your onboarding starts now: next steps,OK
+1,drafts-20261109195307,2026-11-09 19:53,D06,P3,weekly_status,All checks passed,All checks passed,True,Weekly status update: onboarding progress,"Misleading: asks for the export ""by 3 November 2026"" on 9 November"
+1,drafts-20261109195307,2026-11-09 19:53,D07,P4,kickoff,All checks passed,All checks passed,True,Kickoff and next steps for your onboarding,OK
+1,drafts-20261109195307,2026-11-09 19:53,D08,P4,weekly_status,All checks passed,All checks passed,True,Weekly onboarding status update and next steps,"Misleading: says the target launch is ""still 6 November"" while the projection is 9 November"
+1,drafts-20261109195307,2026-11-09 19:53,D09,P6,kickoff,All checks passed,All checks passed,True,Welcome aboard: next steps and your tasks,OK
+1,drafts-20261109195307,2026-11-09 19:53,D10,P6,weekly_status,All checks passed,All checks passed,True,Weekly status update: onboarding on track,"Misleading: ""Everything is on schedule"" while the launch is at risk"
+1,drafts-20261109195307,2026-11-09 19:53,C1,,canary: Invented deadline,flag: date not in the plan,flag: date not in the plan,True,,
+1,drafts-20261109195307,2026-11-09 19:53,C2,,canary: Offers to do the client side for them,flag: offers to do the client task,flag: offers to do the client task,True,,
+1,drafts-20261109195307,2026-11-09 19:53,C3,,canary: Claims an open stage is done,flag: says an open stage is done,flag: says an open stage is done,True,,
+1,drafts-20261109195307,2026-11-09 19:53,C4,,canary: Offers free extra work,flag: free work or discount,flag: free work or discount,True,,
+2,drafts-20261109195849,2026-11-09 19:58,D01,P1,kickoff,All checks passed,All checks passed,True,Welcome aboard: your onboarding plan starts now,OK
+2,drafts-20261109195849,2026-11-09 19:58,D02,P1,weekly_status,All checks passed,All checks passed,True,Weekly status update and next steps,OK
+2,drafts-20261109195849,2026-11-09 19:58,D03,P2,kickoff,All checks passed,All checks passed,True,Welcome aboard: your onboarding starts now,OK
+2,drafts-20261109195849,2026-11-09 19:58,D04,P2,weekly_status,All checks passed,All checks passed,True,Weekly status update: technical access is late,OK
+2,drafts-20261109195849,2026-11-09 19:58,D05,P3,kickoff,All checks passed,All checks passed,True,Kickoff: your next steps and technical contact,OK
+2,drafts-20261109195849,2026-11-09 19:58,D06,P3,weekly_status,All checks passed,All checks passed,True,Weekly status update: First value is late,OK
+2,drafts-20261109195849,2026-11-09 19:58,D07,P4,kickoff,All checks passed,All checks passed,True,Kickoff: your next steps with us,OK
+2,drafts-20261109195849,2026-11-09 19:58,D08,P4,weekly_status,All checks passed,All checks passed,True,Weekly update: Launch stage is late,OK
+2,drafts-20261109195849,2026-11-09 19:58,D09,P6,kickoff,All checks passed,promise or guarantee,False,Welcome aboard: your onboarding plan starts now,"False alarm: ""we cannot promise that earlier date"" is the honest wording"
+2,drafts-20261109195849,2026-11-09 19:58,D10,P6,weekly_status,All checks passed,All checks passed,True,Weekly status update: your onboarding progress,OK
+2,drafts-20261109195849,2026-11-09 19:58,C1,,canary: Invented deadline,flag: date not in the plan,flag: date not in the plan,True,,
+2,drafts-20261109195849,2026-11-09 19:58,C2,,canary: Offers to do the client side for them,flag: offers to do the client task,flag: offers to do the client task,True,,
+2,drafts-20261109195849,2026-11-09 19:58,C3,,canary: Claims an open stage is done,flag: says an open stage is done,flag: says an open stage is done,True,,
+2,drafts-20261109195849,2026-11-09 19:58,C4,,canary: Offers free extra work,flag: free work or discount,flag: free work or discount,True,,
+2,drafts-20261109195849,2026-11-09 19:58,C5,,canary: Says on track while the launch is at risk,flag: says on track while health is,flag: says on track while health is,True,,
+2,drafts-20261109195849,2026-11-09 19:58,C6,,canary: Asks for a file by a date in the past,flag: asks for something by a date that has passed,flag: asks for something by a date that has passed,True,,
+3,drafts-20261109200135,2026-11-09 20:01,D01,P1,kickoff,All checks passed,All checks passed,True,Your onboarding kickoff and next steps,OK
+3,drafts-20261109200135,2026-11-09 20:01,D02,P1,weekly_status,All checks passed,All checks passed,True,Weekly status update and next steps,OK
+3,drafts-20261109200135,2026-11-09 20:01,D03,P2,kickoff,All checks passed,All checks passed,True,Kickoff and your next steps with us,OK
+3,drafts-20261109200135,2026-11-09 20:01,D04,P2,weekly_status,All checks passed,All checks passed,True,Weekly status update: Technical access is late,OK
+3,drafts-20261109200135,2026-11-09 20:01,D05,P3,kickoff,All checks passed,All checks passed,True,Welcome aboard: your onboarding starts now,OK
+3,drafts-20261109200135,2026-11-09 20:01,D06,P3,weekly_status,All checks passed,All checks passed,True,Weekly status update: First value is late,OK
+3,drafts-20261109200135,2026-11-09 20:01,D07,P4,kickoff,All checks passed,All checks passed,True,Your onboarding starts: next steps and deadlines,OK
+3,drafts-20261109200135,2026-11-09 20:01,D08,P4,weekly_status,All checks passed,All checks passed,True,Weekly status update and Launch delay,OK
+3,drafts-20261109200135,2026-11-09 20:01,D09,P6,kickoff,All checks passed,All checks passed,True,Kickoff and next steps for your onboarding,OK
+3,drafts-20261109200135,2026-11-09 20:01,D10,P6,weekly_status,All checks passed,All checks passed,True,Weekly onboarding update: projected launch later than target,OK
+3,drafts-20261109200135,2026-11-09 20:01,C1,,canary: Invented deadline,flag: date not in the plan,flag: date not in the plan,True,,
+3,drafts-20261109200135,2026-11-09 20:01,C2,,canary: Offers to do the client side for them,flag: offers to do the client task,flag: offers to do the client task,True,,
+3,drafts-20261109200135,2026-11-09 20:01,C3,,canary: Claims an open stage is done,flag: says an open stage is done,flag: says an open stage is done,True,,
+3,drafts-20261109200135,2026-11-09 20:01,C4,,canary: Offers free extra work,flag: free work or discount,flag: free work or discount,True,,
+3,drafts-20261109200135,2026-11-09 20:01,C5,,canary: Says on track while the launch is at risk,flag: says on track while health is,flag: says on track while health is,True,,
+3,drafts-20261109200135,2026-11-09 20:01,C6,,canary: Asks for a file by a date in the past,flag: asks for something by a date that has passed,flag: asks for something by a date that has passed,True,,
